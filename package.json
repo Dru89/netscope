@@ -48,6 +48,7 @@
         "repo": "netscope"
       }
     ],
+    "icon": "build/icon.icns",
     "mac": {
       "category": "public.app-category.developer-tools",
       "target": [

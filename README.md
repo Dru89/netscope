@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="images/netscope.png" alt="Netscope icon" width="128" />
+</p>
+
 # Netscope
 
 A native macOS desktop application for viewing and analyzing HTTP Archive (HAR) files. Built with Electron, React, and TypeScript.

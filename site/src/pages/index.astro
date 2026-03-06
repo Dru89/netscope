@@ -9,7 +9,10 @@ const releaseUrl = `${repoUrl}/releases/latest`
   <header class="header">
     <div class="container">
       <nav class="nav">
-        <a href="/" class="nav-logo">Netscope</a>
+        <a href="/" class="nav-logo">
+          <img src="/netscope-icon.png" alt="" class="nav-logo-icon" />
+          Netscope
+        </a>
         <div class="nav-links">
           <a href="#features">Features</a>
           <a href={repoUrl}>GitHub</a>
@@ -22,6 +25,7 @@ const releaseUrl = `${repoUrl}/releases/latest`
   <main>
     <section class="hero">
       <div class="container">
+        <img src="/netscope-icon.png" alt="Netscope icon" class="hero-icon" />
         <h1 class="hero-title">Inspect HAR files<br />on your Mac.</h1>
         <p class="hero-subtitle">
           A native macOS desktop app for viewing and analyzing HTTP Archive files.
@@ -189,10 +193,19 @@ const releaseUrl = `${repoUrl}/releases/latest`
   }
 
   .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-weight: 700;
     font-size: 16px;
     color: var(--color-text);
     text-decoration: none;
+  }
+
+  .nav-logo-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
   }
 
   .nav-links {
@@ -229,6 +242,13 @@ const releaseUrl = `${repoUrl}/releases/latest`
   .hero {
     padding: 80px 0 40px;
     text-align: center;
+  }
+
+  .hero-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    margin-bottom: 20px;
   }
 
   .hero-title {
