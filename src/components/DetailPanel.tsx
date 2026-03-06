@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import type { HarEntry } from '../types/har'
 import {
   formatBytes,
@@ -12,6 +12,7 @@ import {
   computeTimingOffsets,
   prettyPrintJson,
   detectLanguage,
+  isFromCache,
 } from '../utils/har'
 
 interface DetailPanelProps {
@@ -48,6 +49,9 @@ export function DetailPanel({ entry, onClose }: DetailPanelProps) {
             style={{ color: getStatusColor(entry.response.status) }}
           >
             {entry.response.status} {entry.response.statusText}
+            {isFromCache(entry) && (
+              <span className="cache-indicator"> (from disk cache)</span>
+            )}
           </span>
           <span className="detail-url" title={entry.request.url}>
             {entry.request.url}
@@ -70,7 +74,7 @@ export function DetailPanel({ entry, onClose }: DetailPanelProps) {
         ))}
       </div>
 
-      <div className="detail-content">
+      <div className={`detail-content ${activeTab === 'source' ? 'detail-content-source' : ''}`}>
         {activeTab === 'headers' && <HeadersTab entry={entry} />}
         {activeTab === 'payload' && <PayloadTab entry={entry} />}
         {activeTab === 'response' && <ResponseTab entry={entry} />}
@@ -104,6 +108,9 @@ function HeadersTab({ entry }: { entry: HarEntry }) {
                 <span style={{ color: getStatusColor(entry.response.status) }}>
                   {entry.response.status} {entry.response.statusText}
                 </span>
+                {isFromCache(entry) && (
+                  <span className="cache-indicator"> (from disk cache)</span>
+                )}
               </td>
             </tr>
             <tr>
@@ -448,19 +455,237 @@ function SourceTab({ entry }: { entry: HarEntry }) {
     return JSON.stringify(clean, null, 2)
   }, [entry])
 
+  const [searchQuery, setSearchQuery] = useState('')
+  const [matchIndex, setMatchIndex] = useState(0)
+  const [matchCount, setMatchCount] = useState(0)
+  const contentRef = useRef<HTMLPreElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const [searchVisible, setSearchVisible] = useState(false)
+
+  const findMatches = useCallback(
+    (query: string) => {
+      if (!query) return []
+      const matches: number[] = []
+      const lower = source.toLowerCase()
+      const q = query.toLowerCase()
+      let pos = 0
+      while (pos < lower.length) {
+        const idx = lower.indexOf(q, pos)
+        if (idx === -1) break
+        matches.push(idx)
+        pos = idx + 1
+      }
+      return matches
+    },
+    [source]
+  )
+
+  // Build highlighted content with matches wrapped in <mark> elements
+  const highlightedContent = useMemo(() => {
+    if (!searchQuery) return source
+    const matches = findMatches(searchQuery)
+    if (matches.length === 0) return source
+
+    const parts: string[] = []
+    let lastEnd = 0
+    matches.forEach((matchPos, i) => {
+      // Escape HTML in the text between matches
+      parts.push(escapeHtml(source.substring(lastEnd, matchPos)))
+      const matchText = source.substring(matchPos, matchPos + searchQuery.length)
+      const cls = i === matchIndex ? 'source-match active' : 'source-match'
+      parts.push(`<mark class="${cls}">${escapeHtml(matchText)}</mark>`)
+      lastEnd = matchPos + searchQuery.length
+    })
+    parts.push(escapeHtml(source.substring(lastEnd)))
+    return parts.join('')
+  }, [source, searchQuery, matchIndex, findMatches])
+
+  const scrollToCurrentMatch = useCallback(() => {
+    if (!contentRef.current) return
+    const activeMatch = contentRef.current.querySelector('mark.active')
+    if (activeMatch) {
+      activeMatch.scrollIntoView({ block: 'center' })
+    }
+  }, [])
+
+  // Scroll to active match when it changes
+  useEffect(() => {
+    if (searchQuery && matchCount > 0) {
+      // Wait for DOM to update with new highlights
+      requestAnimationFrame(scrollToCurrentMatch)
+    }
+  }, [matchIndex, highlightedContent, scrollToCurrentMatch, searchQuery, matchCount])
+
+  const handleSearch = useCallback(
+    (query: string) => {
+      setSearchQuery(query)
+      const matches = findMatches(query)
+      setMatchCount(matches.length)
+      setMatchIndex(0)
+    },
+    [findMatches]
+  )
+
+  const handleNextMatch = useCallback(() => {
+    if (matchCount === 0) return
+    setMatchIndex((prev) => (prev + 1) % matchCount)
+  }, [matchCount])
+
+  const handlePrevMatch = useCallback(() => {
+    if (matchCount === 0) return
+    setMatchIndex((prev) => (prev - 1 + matchCount) % matchCount)
+  }, [matchCount])
+
+  const handleSearchKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        if (e.shiftKey) {
+          handlePrevMatch()
+        } else {
+          handleNextMatch()
+        }
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'g') {
+        e.preventDefault()
+        if (e.shiftKey) {
+          handlePrevMatch()
+        } else {
+          handleNextMatch()
+        }
+      }
+      if (e.key === 'Escape') {
+        setSearchVisible(false)
+      }
+    },
+    [handleNextMatch, handlePrevMatch]
+  )
+
+  // Handle Cmd+F / Cmd+G on the source content
+  const handleContentKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault()
+        setSearchVisible(true)
+        requestAnimationFrame(() => {
+          searchInputRef.current?.focus()
+          searchInputRef.current?.select()
+        })
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'g' && searchVisible) {
+        e.preventDefault()
+        if (e.shiftKey) {
+          handlePrevMatch()
+        } else {
+          handleNextMatch()
+        }
+      }
+    },
+    [searchVisible, handleNextMatch, handlePrevMatch]
+  )
+
+  // Focus search input when it becomes visible
+  useEffect(() => {
+    if (searchVisible) {
+      requestAnimationFrame(() => {
+        searchInputRef.current?.focus()
+      })
+    }
+  }, [searchVisible])
+
+  // Auto-focus content when Source tab mounts so Cmd+F works immediately
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      contentRef.current?.focus()
+    })
+  }, [])
+
   const handleCopy = () => {
     navigator.clipboard.writeText(source)
   }
 
   return (
-    <div className="detail-section">
+    <div className="source-tab">
       <div className="detail-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>HAR Entry Source</span>
-        <button className="source-copy-btn" onClick={handleCopy}>
-          Copy
-        </button>
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <button
+            className="source-copy-btn"
+            onClick={() => {
+              setSearchVisible(!searchVisible)
+              if (!searchVisible) {
+                requestAnimationFrame(() => {
+                  searchInputRef.current?.focus()
+                })
+              }
+            }}
+            title="Search (Cmd+F)"
+          >
+            Search
+          </button>
+          <button className="source-copy-btn" onClick={handleCopy}>
+            Copy
+          </button>
+        </div>
       </div>
-      <div className="code-preview">{source}</div>
+      {searchVisible && (
+        <div className="source-search-bar">
+          <input
+            ref={searchInputRef}
+            type="text"
+            className="source-search-input"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+          />
+          {searchQuery && (
+            <span className="source-search-count">
+              {matchCount > 0
+                ? `${matchIndex + 1} of ${matchCount}`
+                : 'No results'}
+            </span>
+          )}
+          <button
+            className="source-search-nav-btn"
+            onClick={handlePrevMatch}
+            disabled={matchCount === 0}
+            title="Previous match (Shift+Enter)"
+          >
+            &#x25B2;
+          </button>
+          <button
+            className="source-search-nav-btn"
+            onClick={handleNextMatch}
+            disabled={matchCount === 0}
+            title="Next match (Enter)"
+          >
+            &#x25BC;
+          </button>
+          <button
+            className="source-search-nav-btn"
+            onClick={() => setSearchVisible(false)}
+            title="Close search"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+      <pre
+        ref={contentRef}
+        className="source-content"
+        tabIndex={0}
+        onKeyDown={handleContentKeyDown}
+        dangerouslySetInnerHTML={{ __html: highlightedContent }}
+      />
     </div>
   )
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }

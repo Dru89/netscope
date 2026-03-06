@@ -8,6 +8,8 @@ import { SummaryBar } from './components/SummaryBar'
 import { WelcomeScreen } from './components/WelcomeScreen'
 import './styles/app.css'
 
+export type ThemeMode = 'system' | 'light' | 'dark'
+
 function App() {
   const [har, setHar] = useState<Har | null>(null)
   const [fileName, setFileName] = useState<string>('')
@@ -24,6 +26,17 @@ function App() {
     field: 'waterfall',
     direction: 'asc',
   })
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    return (localStorage.getItem('themeMode') as ThemeMode) || 'system'
+  })
+
+  // Apply theme mode on mount and when it changes
+  useEffect(() => {
+    localStorage.setItem('themeMode', themeMode)
+    if (window.electronAPI) {
+      window.electronAPI.setThemeMode(themeMode)
+    }
+  }, [themeMode])
 
   const loadHarContent = useCallback((content: string, name: string) => {
     try {
@@ -203,7 +216,13 @@ function App() {
               </div>
             )}
           </div>
-          {summary && <SummaryBar summary={summary} />}
+          {summary && (
+            <SummaryBar
+              summary={summary}
+              themeMode={themeMode}
+              onThemeModeChange={setThemeMode}
+            />
+          )}
         </div>
       )}
     </div>

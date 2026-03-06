@@ -78,6 +78,27 @@ export function getResourceSize(entry: HarEntry): number {
   return entry.response.content.size || 0
 }
 
+export function isFromCache(entry: HarEntry): boolean {
+  // Chrome records _transferSize: 0 when the response was served from disk cache
+  if (
+    entry.response._transferSize === 0 &&
+    entry.response.status > 0 &&
+    (entry.response.content.size > 0 || entry.response.bodySize === 0)
+  ) {
+    return true
+  }
+  // Also check if bodySize is 0 or negative with content present (common in
+  // HAR files from various sources)
+  if (
+    entry.response.bodySize <= 0 &&
+    entry.response.headersSize <= 0 &&
+    entry.response.status === 304
+  ) {
+    return true
+  }
+  return false
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B'
   if (bytes < 0) return '-'

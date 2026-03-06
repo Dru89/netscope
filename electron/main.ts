@@ -2,11 +2,12 @@ import { app, BrowserWindow, dialog, ipcMain, nativeTheme, Menu } from 'electron
 import path from 'path'
 import fs from 'fs'
 
-let mainWindow: BrowserWindow | null = null
+const windows = new Set<BrowserWindow>()
+const windowFilePaths = new Map<BrowserWindow, string>()
 let pendingFile: string | null = null
 
-function createWindow() {
-  mainWindow = new BrowserWindow({
+function createWindow(fileToOpen?: string): BrowserWindow {
+  const win = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 900,
@@ -22,46 +23,69 @@ function createWindow() {
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#1e1e1e' : '#ffffff',
   })
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow?.show()
-    // If a file was opened before the window was ready, send it now
-    if (pendingFile) {
-      sendFileToRenderer(pendingFile)
-      pendingFile = null
+  windows.add(win)
+
+  win.once('ready-to-show', () => {
+    win.show()
+    // If a file was specified for this window, send it now
+    if (fileToOpen) {
+      sendFileToWindow(win, fileToOpen)
     }
   })
 
   if (process.env.VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
+    win.loadURL(process.env.VITE_DEV_SERVER_URL)
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+    win.loadFile(path.join(__dirname, '../dist/index.html'))
   }
 
-  mainWindow.on('closed', () => {
-    mainWindow = null
+  win.on('closed', () => {
+    windows.delete(win)
+    windowFilePaths.delete(win)
   })
+
+  return win
 }
 
-function sendFileToRenderer(filePath: string) {
-  if (!mainWindow) {
-    pendingFile = filePath
-    return
-  }
+function sendFileToWindow(win: BrowserWindow, filePath: string) {
   try {
-    const content = fs.readFileSync(filePath, 'utf-8')
-    mainWindow.webContents.send('har-file-opened', {
-      filePath,
+    const resolved = path.resolve(filePath)
+    const content = fs.readFileSync(resolved, 'utf-8')
+    windowFilePaths.set(win, resolved)
+    win.webContents.send('har-file-opened', {
+      filePath: resolved,
       content,
-      fileName: path.basename(filePath),
+      fileName: path.basename(resolved),
     })
   } catch (err) {
     console.error('Failed to read HAR file:', err)
   }
 }
 
+function findWindowForFile(filePath: string): BrowserWindow | null {
+  const resolved = path.resolve(filePath)
+  let found: BrowserWindow | null = null
+  windowFilePaths.forEach((openPath, win) => {
+    if (openPath === resolved) {
+      found = win
+    }
+  })
+  return found
+}
+
+function openFileInNewWindow(filePath: string) {
+  const existing = findWindowForFile(filePath)
+  if (existing) {
+    existing.focus()
+    return
+  }
+  createWindow(filePath)
+}
+
 // Handle file open dialog
-ipcMain.handle('open-file-dialog', async () => {
-  const result = await dialog.showOpenDialog(mainWindow!, {
+ipcMain.handle('open-file-dialog', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender)
+  const result = await dialog.showOpenDialog(win!, {
     properties: ['openFile'],
     filters: [
       { name: 'HAR Files', extensions: ['har'] },
@@ -73,6 +97,9 @@ ipcMain.handle('open-file-dialog', async () => {
     const filePath = result.filePaths[0]
     try {
       const content = fs.readFileSync(filePath, 'utf-8')
+      if (win) {
+        windowFilePaths.set(win, path.resolve(filePath))
+      }
       return {
         filePath,
         content,
@@ -87,9 +114,13 @@ ipcMain.handle('open-file-dialog', async () => {
 })
 
 // Handle reading a file from a dropped path
-ipcMain.handle('read-har-file', async (_event, filePath: string) => {
+ipcMain.handle('read-har-file', async (event, filePath: string) => {
   try {
     const content = fs.readFileSync(filePath, 'utf-8')
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) {
+      windowFilePaths.set(win, path.resolve(filePath))
+    }
     return {
       filePath,
       content,
@@ -106,12 +137,17 @@ ipcMain.handle('get-native-theme', () => {
   return nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
 })
 
+// Handle theme mode changes (system, light, dark)
+ipcMain.handle('set-theme-mode', (_event, mode: 'system' | 'light' | 'dark') => {
+  nativeTheme.themeSource = mode
+})
+
 // Watch for theme changes
 nativeTheme.on('updated', () => {
-  mainWindow?.webContents.send(
-    'theme-changed',
-    nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
-  )
+  const theme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
+  windows.forEach((win) => {
+    win.webContents.send('theme-changed', theme)
+  })
 })
 
 // Build application menu
@@ -138,7 +174,8 @@ function buildMenu() {
           label: 'Open HAR File...',
           accelerator: 'CmdOrCtrl+O',
           click: async () => {
-            const result = await dialog.showOpenDialog(mainWindow!, {
+            const focusedWindow = BrowserWindow.getFocusedWindow()
+            const result = await dialog.showOpenDialog(focusedWindow!, {
               properties: ['openFile'],
               filters: [
                 { name: 'HAR Files', extensions: ['har'] },
@@ -146,7 +183,12 @@ function buildMenu() {
               ],
             })
             if (!result.canceled && result.filePaths.length > 0) {
-              sendFileToRenderer(result.filePaths[0])
+              // Open in the focused window by sending to its renderer
+              if (focusedWindow) {
+                sendFileToWindow(focusedWindow, result.filePaths[0])
+              } else {
+                openFileInNewWindow(result.filePaths[0])
+              }
             }
           },
         },
@@ -157,7 +199,12 @@ function buildMenu() {
     {
       label: 'Edit',
       submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
         { role: 'copy' },
+        { role: 'paste' },
         { role: 'selectAll' },
       ],
     },
@@ -192,16 +239,17 @@ function buildMenu() {
 // macOS: Handle file open via Finder double-click or drag onto dock icon
 app.on('open-file', (event, filePath) => {
   event.preventDefault()
-  if (mainWindow) {
-    sendFileToRenderer(filePath)
+  if (app.isReady()) {
+    // App is running — always open a new window for the file
+    openFileInNewWindow(filePath)
   } else {
+    // App is still launching — store it and the initial window will pick it up
     pendingFile = filePath
   }
 })
 
 app.whenReady().then(() => {
   buildMenu()
-  createWindow()
 
   // Check if launched with a file argument (e.g., from command line)
   const args = process.argv.slice(1)
@@ -211,6 +259,10 @@ app.whenReady().then(() => {
   if (harFile && !pendingFile) {
     pendingFile = path.resolve(harFile)
   }
+
+  // Create the initial window, passing the pending file if any
+  createWindow(pendingFile || undefined)
+  pendingFile = null
 })
 
 app.on('window-all-closed', () => {
@@ -218,7 +270,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('activate', () => {
-  if (mainWindow === null) {
+  if (windows.size === 0) {
     createWindow()
   }
 })

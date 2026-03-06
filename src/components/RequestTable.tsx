@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect, useRef } from 'react'
 import type { HarEntry, SortState, SortField } from '../types/har'
 import {
   getEntryName,
@@ -30,6 +30,37 @@ export function RequestTable({
   sort,
   onSortChange,
 }: RequestTableProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const prevEntriesRef = useRef<HarEntry[]>(entries)
+
+  // Scroll the selected entry into view only when the entries list changes
+  // (e.g., when switching content-type filter tabs), not on selection change
+  useEffect(() => {
+    const entriesChanged = prevEntriesRef.current !== entries
+    prevEntriesRef.current = entries
+
+    if (!entriesChanged || !selectedEntry || !containerRef.current) return
+    const selectedIndex = selectedEntry._index
+    const isInList = entries.some((e) => e._index === selectedIndex)
+    if (!isInList) return
+
+    // Use requestAnimationFrame to ensure DOM has updated with new entries
+    requestAnimationFrame(() => {
+      const container = containerRef.current
+      const row = container?.querySelector(
+        `tr[data-entry-index="${selectedIndex}"]`
+      ) as HTMLElement | null
+      if (!row || !container) return
+
+      // Calculate scroll position that centers the row in the container
+      const rowTop = row.offsetTop
+      const rowHeight = row.offsetHeight
+      const containerHeight = container.clientHeight
+      const targetScrollTop = rowTop - containerHeight / 2 + rowHeight / 2
+      container.scrollTop = targetScrollTop
+    })
+  }, [entries, selectedEntry])
+
   // Compute waterfall boundaries
   const { minTime, maxTime } = useMemo(() => {
     if (allEntries.length === 0) return { minTime: 0, maxTime: 1 }
@@ -67,7 +98,7 @@ export function RequestTable({
   }
 
   return (
-    <div className="request-table-container">
+    <div className="request-table-container" ref={containerRef}>
       <table className="request-table">
         <thead>
           <tr>
@@ -131,6 +162,7 @@ export function RequestTable({
             return (
               <tr
                 key={entry._index ?? index}
+                data-entry-index={entry._index}
                 className={`row ${isSelected ? 'selected' : ''} ${isError ? 'error-row' : ''}`}
                 onClick={() => onSelectEntry(entry)}
                 title={entry.request.url}

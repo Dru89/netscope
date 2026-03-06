@@ -1,11 +1,20 @@
 import type { SummaryStats } from '../types/har'
+import type { ThemeMode } from '../App'
 import { formatBytes, formatTime } from '../utils/har'
 
 interface SummaryBarProps {
   summary: SummaryStats
+  themeMode: ThemeMode
+  onThemeModeChange: (mode: ThemeMode) => void
 }
 
-export function SummaryBar({ summary }: SummaryBarProps) {
+const THEME_OPTIONS: { label: string; value: ThemeMode }[] = [
+  { label: 'System', value: 'system' },
+  { label: 'Light', value: 'light' },
+  { label: 'Dark', value: 'dark' },
+]
+
+export function SummaryBar({ summary, themeMode, onThemeModeChange }: SummaryBarProps) {
   return (
     <div className="summary-bar">
       <div className="summary-item">
@@ -43,6 +52,18 @@ export function SummaryBar({ summary }: SummaryBarProps) {
             <span>{type}</span>
           </div>
         ))}
+      <div className="summary-theme-toggle">
+        {THEME_OPTIONS.map(({ label, value }) => (
+          <button
+            key={value}
+            className={`summary-theme-btn ${themeMode === value ? 'active' : ''}`}
+            onClick={() => onThemeModeChange(value)}
+            title={`${label} theme`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

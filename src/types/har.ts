@@ -79,6 +79,7 @@ export interface HarResponse {
   redirectURL: string
   headersSize: number
   bodySize: number
+  _transferSize?: number
   comment?: string
 }
 

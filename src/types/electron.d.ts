@@ -10,6 +10,7 @@ export interface ElectronAPI {
     fileName: string
   } | null>
   getNativeTheme: () => Promise<'dark' | 'light'>
+  setThemeMode: (mode: 'system' | 'light' | 'dark') => Promise<void>
   onHarFileOpened: (
     callback: (data: {
       filePath: string
