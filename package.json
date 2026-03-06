@@ -2,11 +2,18 @@
   "name": "har-explorer",
   "version": "1.0.0",
   "description": "A desktop app for viewing and exploring HAR files",
+  "author": "Drew Hays",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Dru89/har-analyzer"
+  },
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
     "build:vite": "tsc && vite build",
+    "release": "tsc && vite build && electron-builder --mac --publish always",
     "preview": "vite preview",
     "electron:dev": "vite --mode electron"
   },
@@ -15,9 +22,11 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@electron/notarize": "^3.1.1",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@vitejs/plugin-react": "^4.2.1",
+    "dotenv": "^17.3.1",
     "electron": "^28.1.0",
     "electron-builder": "^24.9.1",
     "typescript": "^5.3.3",
@@ -28,9 +37,22 @@
   "build": {
     "appId": "com.har-explorer.app",
     "productName": "HAR Explorer",
+    "afterSign": "scripts/notarize.js",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Dru89",
+        "repo": "har-analyzer"
+      }
+    ],
     "mac": {
       "category": "public.app-category.developer-tools",
-      "target": ["dmg", "dir"],
+      "target": ["dmg"],
+      "identity": "Developer ID Application",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "entitlements.plist",
+      "entitlementsInherit": "entitlements.plist",
       "fileAssociations": [
         {
           "ext": "har",
