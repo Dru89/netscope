@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme, Menu } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import path from 'path'
 import fs from 'fs'
 
@@ -278,6 +279,12 @@ app.whenReady().then(() => {
   // Create the initial window, passing the pending file if any
   createWindow(pendingFile || undefined)
   pendingFile = null
+
+  // Check for updates (silently — notifies user only when an update is ready)
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = true
+  autoUpdater.logger = null // Suppress verbose logging
+  autoUpdater.checkForUpdatesAndNotify()
 })
 
 app.on('window-all-closed', () => {

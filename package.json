@@ -1,6 +1,6 @@
 {
   "name": "har-explorer",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A desktop app for viewing and exploring HAR files",
   "author": "Drew Hays",
   "license": "MIT",
@@ -15,9 +15,12 @@
     "build:vite": "tsc && vite build",
     "release": "bash scripts/release.sh",
     "preview": "vite preview",
-    "electron:dev": "vite --mode electron"
+    "electron:dev": "vite --mode electron",
+    "site:dev": "npm run dev --prefix site",
+    "site:build": "npm run build --prefix site"
   },
   "dependencies": {
+    "electron-updater": "^6.8.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
@@ -47,7 +50,10 @@
     ],
     "mac": {
       "category": "public.app-category.developer-tools",
-      "target": ["dmg"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "identity": "Developer ID Application",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,

@@ -1,0 +1,64 @@
+---
+interface Props {
+  title: string
+}
+
+const { title } = Astro.props
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A native macOS desktop app for viewing and analyzing HTTP Archive (HAR) files. Open, inspect, and explore network requests with a Chrome DevTools-like experience." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --color-bg: #ffffff;
+    --color-bg-alt: #f8f9fa;
+    --color-bg-code: #f1f3f5;
+    --color-text: #1a1a1a;
+    --color-text-secondary: #6b7280;
+    --color-accent: #2563eb;
+    --color-accent-hover: #1d4ed8;
+    --color-border: #e5e7eb;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
+    --max-width: 960px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: #111111;
+      --color-bg-alt: #1a1a1a;
+      --color-bg-code: #222222;
+      --color-text: #e5e7eb;
+      --color-text-secondary: #9ca3af;
+      --color-accent: #3b82f6;
+      --color-accent-hover: #60a5fa;
+      --color-border: #2d2d2d;
+    }
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-text);
+    background: var(--color-bg);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+</style>

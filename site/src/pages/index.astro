@@ -1,0 +1,460 @@
+---
+import Layout from '../layouts/Layout.astro'
+
+const repoUrl = 'https://github.com/Dru89/har-analyzer'
+const releaseUrl = `${repoUrl}/releases/latest`
+---
+
+<Layout title="HAR Explorer - Network Inspector for macOS">
+  <header class="header">
+    <div class="container">
+      <nav class="nav">
+        <a href="/" class="nav-logo">HAR Explorer</a>
+        <div class="nav-links">
+          <a href="#features">Features</a>
+          <a href={repoUrl}>GitHub</a>
+          <a href={releaseUrl} class="nav-download">Download</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <h1 class="hero-title">Inspect HAR files<br />on your Mac.</h1>
+        <p class="hero-subtitle">
+          A native macOS desktop app for viewing and analyzing HTTP Archive files.
+          The same network inspection experience as Chrome DevTools, but as a standalone app.
+        </p>
+        <div class="hero-actions">
+          <a href={releaseUrl} class="btn btn-primary">Download for macOS</a>
+          <a href={repoUrl} class="btn btn-secondary">View on GitHub</a>
+        </div>
+        <div class="hero-screenshot">
+          <img src="/main-screen.png" alt="HAR Explorer showing a list of network requests with waterfall chart" />
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="features">
+      <div class="container">
+        <h2 class="section-title">Everything you need to explore HAR files</h2>
+
+        <div class="feature">
+          <div class="feature-text">
+            <h3>Filter and search</h3>
+            <p>
+              Narrow down requests by content type -- XHR, JS, CSS, images, fonts, and more.
+              Search by URL to find exactly what you're looking for. Sort by any column.
+            </p>
+          </div>
+          <div class="feature-images">
+            <img src="/main-screen-filter.png" alt="Filtering requests by image type" />
+            <img src="/main-screen-search.png" alt="Searching requests by URL" />
+          </div>
+        </div>
+
+        <div class="feature feature-reverse">
+          <div class="feature-text">
+            <h3>Detailed request inspection</h3>
+            <p>
+              Click any request to inspect headers, payload, response body, cookies, and timing data.
+              See status codes, remote addresses, content types, and transfer sizes at a glance.
+            </p>
+          </div>
+          <div class="feature-image">
+            <img src="/details-headers.png" alt="Detail panel showing headers for an XHR request" />
+          </div>
+        </div>
+
+        <div class="feature">
+          <div class="feature-text">
+            <h3>Timing breakdown</h3>
+            <p>
+              Visualize the request lifecycle -- queueing, stalled, send, wait (TTFB), and receive --
+              with a horizontal bar chart. Identify bottlenecks in your network requests.
+            </p>
+          </div>
+          <div class="feature-image">
+            <img src="/details-timing.png" alt="Timing breakdown showing TTFB and other phases" />
+          </div>
+        </div>
+
+        <div class="feature feature-reverse">
+          <div class="feature-text">
+            <h3>Source search</h3>
+            <p>
+              View the raw HAR JSON for any entry and search through it with match highlighting.
+              Navigate between matches with keyboard shortcuts.
+            </p>
+          </div>
+          <div class="feature-image">
+            <img src="/details-raw-with-search.png" alt="Source tab with search highlighting" />
+          </div>
+        </div>
+
+        <div class="feature">
+          <div class="feature-text">
+            <h3>Dark mode</h3>
+            <p>
+              Switch between System, Light, and Dark themes. Your preference is saved across sessions.
+              The app follows your macOS appearance by default.
+            </p>
+          </div>
+          <div class="feature-image">
+            <img src="/main-screen-dark.png" alt="HAR Explorer in dark mode" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="extras">
+      <div class="container">
+        <h2 class="section-title">And more</h2>
+        <div class="extras-grid">
+          <div class="extra">
+            <h4>Multi-window</h4>
+            <p>Each HAR file opens in its own window. Already-open files are focused instead of duplicated.</p>
+          </div>
+          <div class="extra">
+            <h4>Drag and drop</h4>
+            <p>Drop a .har file onto the app window or double-click it in Finder to open.</p>
+          </div>
+          <div class="extra">
+            <h4>Cache detection</h4>
+            <p>Responses served from the browser cache are labeled "(from disk cache)" on the status code.</p>
+          </div>
+          <div class="extra">
+            <h4>Auto-updates</h4>
+            <p>The app checks for updates automatically and installs them when you quit.</p>
+          </div>
+          <div class="extra">
+            <h4>Code signed</h4>
+            <p>Signed with a Developer ID certificate and notarized by Apple. No Gatekeeper warnings.</p>
+          </div>
+          <div class="extra">
+            <h4>Open source</h4>
+            <p>MIT licensed. Built with Electron, React, and TypeScript.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="container">
+        <h2>Ready to explore?</h2>
+        <p>Download HAR Explorer and start inspecting your network requests.</p>
+        <div class="hero-actions">
+          <a href={releaseUrl} class="btn btn-primary">Download for macOS</a>
+          <a href={repoUrl} class="btn btn-secondary">View on GitHub</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>
+        Built by <a href="https://github.com/Dru89">Drew Hays</a>.
+        Open source on <a href={repoUrl}>GitHub</a>.
+        Licensed under MIT.
+      </p>
+    </div>
+  </footer>
+</Layout>
+
+<style>
+  /* Header */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+    backdrop-filter: blur(12px);
+  }
+
+  .container {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+  }
+
+  .nav-logo {
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .nav-links a {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .nav-links a:hover {
+    color: var(--color-text);
+  }
+
+  .nav-download {
+    background: var(--color-accent);
+    color: white !important;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-weight: 500;
+  }
+
+  .nav-download:hover {
+    background: var(--color-accent-hover);
+    color: white !important;
+  }
+
+  /* Hero */
+  .hero {
+    padding: 80px 0 40px;
+    text-align: center;
+  }
+
+  .hero-title {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    margin-bottom: 16px;
+  }
+
+  .hero-subtitle {
+    font-size: 18px;
+    color: var(--color-text-secondary);
+    max-width: 560px;
+    margin: 0 auto 32px;
+    line-height: 1.6;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 48px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--color-accent);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: var(--color-accent-hover);
+  }
+
+  .btn-secondary {
+    background: var(--color-bg-alt);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+  }
+
+  .btn-secondary:hover {
+    background: var(--color-bg-code);
+  }
+
+  .hero-screenshot img {
+    width: 100%;
+    max-width: var(--max-width);
+    border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .hero-screenshot img {
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06);
+    }
+  }
+
+  /* Features */
+  .features {
+    padding: 80px 0;
+  }
+
+  .section-title {
+    font-size: 32px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 56px;
+    letter-spacing: -0.02em;
+  }
+
+  .feature {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 40px;
+    align-items: center;
+    margin-bottom: 64px;
+  }
+
+  .feature-reverse {
+    grid-template-columns: 1.5fr 1fr;
+  }
+
+  .feature-reverse .feature-text {
+    order: 2;
+  }
+
+  .feature h3 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .feature p {
+    font-size: 15px;
+    color: var(--color-text-secondary);
+    line-height: 1.7;
+  }
+
+  .feature-image img,
+  .feature-images img {
+    width: 100%;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .feature-image img,
+    .feature-images img {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+  }
+
+  .feature-images {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Extras */
+  .extras {
+    padding: 80px 0;
+    background: var(--color-bg-alt);
+  }
+
+  .extras-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  .extra {
+    padding: 24px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+  }
+
+  .extra h4 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .extra p {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+  }
+
+  /* CTA */
+  .cta {
+    padding: 80px 0;
+    text-align: center;
+  }
+
+  .cta h2 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .cta p {
+    font-size: 16px;
+    color: var(--color-text-secondary);
+    margin-bottom: 24px;
+  }
+
+  /* Footer */
+  .footer {
+    padding: 32px 0;
+    border-top: 1px solid var(--color-border);
+    text-align: center;
+  }
+
+  .footer p {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+  }
+
+  .footer a {
+    color: var(--color-text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .footer a:hover {
+    color: var(--color-text);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .hero-title {
+      font-size: 32px;
+    }
+
+    .hero-subtitle {
+      font-size: 16px;
+    }
+
+    .feature,
+    .feature-reverse {
+      grid-template-columns: 1fr;
+    }
+
+    .feature-reverse .feature-text {
+      order: 0;
+    }
+
+    .extras-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .hero-actions {
+      flex-direction: column;
+      align-items: center;
+    }
+  }
+</style>
