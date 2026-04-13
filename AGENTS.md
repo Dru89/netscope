@@ -37,7 +37,6 @@ build/              Electron-builder resources (icon.icns)
 images/             README screenshots and app icon source (netscope.png)
 scripts/
   notarize.js       Apple notarization afterSign hook (uses @electron/notarize)
-  release.sh        Tag, push, build, sign, notarize, publish to GitHub Releases
 site/               Marketing website (Astro 5, deployed to Netlify)
   src/layouts/      Base HTML layout with global CSS
   src/pages/        Single-page landing site (index.astro)
@@ -60,15 +59,20 @@ docs/               Internal docs (architecture.md, features.md, har-format.md)
 ## Key Commands
 
 ```bash
-npm run dev           # Vite dev server + Electron with hot reload
-npm run build         # tsc && vite build && electron-builder (full production build)
-npm run build:vite    # tsc && vite build (bundle only, no packaging)
-npm test              # Run tests with Vitest (single run)
-npm run test:watch    # Run tests in watch mode
-npm run release       # Tag, build, sign, notarize, publish to GitHub Releases
-npm run site:dev      # Astro dev server for the marketing site
-npm run site:build    # Build the marketing site
+make dev              # Vite dev server + Electron with hot reload
+make build            # tsc && vite build (bundle only, no packaging)
+make package          # Full production build: tsc && vite build && electron-builder
+make test             # Run tests with Vitest (single run)
+make test-watch       # Run tests in watch mode
+make lint             # Type-check only (tsc --noEmit)
+make clean            # Remove dist/, dist-electron/, release/
+make icons            # Regenerate platform icons from images/netscope.png
+make release          # Interactive version bump, tag, push (CI builds the release)
+make site-dev         # Astro dev server for the marketing site
+make site-build       # Build the marketing site
 ```
+
+All targets are also available as npm scripts (`npm run dev`, `npm test`, etc.) except `make lint`, `make clean`, `make icons`, and `make release` which are Makefile-only.
 
 ## Testing
 

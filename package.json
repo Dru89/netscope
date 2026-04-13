@@ -13,7 +13,7 @@
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
     "build:vite": "tsc && vite build",
-    "release": "bash scripts/release.sh",
+    "release": "make release",
     "preview": "vite preview",
     "electron:dev": "vite --mode electron",
     "site:dev": "npm run dev --prefix site",
