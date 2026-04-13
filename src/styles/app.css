@@ -269,6 +269,7 @@
 .request-table-container {
   flex: 1;
   overflow: auto;
+  outline: none;
 }
 
 .request-table {

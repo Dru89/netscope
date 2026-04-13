@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Har, HarEntry, FilterState, SortState } from './types/har'
 import { parseHar, getContentType, getEntryName, getTransferSize, computeSummary } from './utils/har'
 import { Toolbar } from './components/Toolbar'
@@ -110,15 +110,85 @@ function App() {
     e.stopPropagation()
   }, [])
 
-  // Select an entry and open the detail panel
+  // Select an entry and open the detail panel (used by click)
   const handleSelectEntry = useCallback((entry: HarEntry) => {
     setSelectedEntry(entry)
     setDetailPanelOpen(true)
   }, [])
 
+  // Select an entry without changing the detail panel (used by keyboard nav)
+  const handleSelectEntryOnly = useCallback((entry: HarEntry) => {
+    setSelectedEntry(entry)
+  }, [])
+
+  // Toggle the detail panel for an entry (used by Enter/Space)
+  const handleToggleDetail = useCallback((entry: HarEntry) => {
+    setSelectedEntry((prev) => {
+      const isSameEntry = prev?._index === entry._index
+      if (isSameEntry) {
+        setDetailPanelOpen((open) => !open)
+      } else {
+        setDetailPanelOpen(true)
+      }
+      return entry
+    })
+  }, [])
+
   const handleCloseDetail = useCallback(() => {
     setDetailPanelOpen(false)
   }, [])
+
+  const filterInputRef = useRef<HTMLInputElement>(null)
+  const tableContainerRef = useRef<HTMLDivElement>(null)
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      const isInput =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      const isInDetailPanel = !!target.closest('.detail-panel')
+
+      // Escape — close detail panel and return focus to table
+      if (e.key === 'Escape') {
+        if (isInput && target === filterInputRef.current) {
+          // Escape in filter input: blur it and return focus to table
+          ;(target as HTMLElement).blur()
+          tableContainerRef.current?.focus()
+          return
+        }
+        // If focus is inside the detail panel, let its own handlers deal with
+        // Escape first (e.g., closing the source search bar). Only close the
+        // panel when Escape is pressed outside an input within the panel.
+        if (isInDetailPanel && isInput) return
+        if (detailPanelOpen) {
+          e.preventDefault()
+          setDetailPanelOpen(false)
+          tableContainerRef.current?.focus()
+          return
+        }
+      }
+
+      // / — focus filter input (unless already in an input)
+      if (e.key === '/' && !isInput) {
+        e.preventDefault()
+        filterInputRef.current?.focus()
+        return
+      }
+
+      // Cmd+F — focus filter input (unless in detail panel or already in an input)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f' && !isInDetailPanel && !isInput) {
+        e.preventDefault()
+        filterInputRef.current?.focus()
+        return
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [detailPanelOpen])
 
   // Filter and sort entries
   const filteredEntries = har
@@ -189,6 +259,7 @@ function App() {
       ) : (
         <div className="app-content">
           <Toolbar
+            ref={filterInputRef}
             fileName={fileName}
             filter={filter}
             onFilterChange={setFilter}
@@ -202,9 +273,12 @@ function App() {
                 entries={sortedEntries}
                 allEntries={har.log.entries}
                 selectedEntry={selectedEntry}
-                onSelectEntry={handleSelectEntry}
+                onSelectEntry={handleSelectEntryOnly}
+                onClickEntry={handleSelectEntry}
+                onToggleDetail={handleToggleDetail}
                 sort={sort}
                 onSortChange={setSort}
+                containerRef={tableContainerRef}
               />
             </div>
             {detailPanelOpen && selectedEntry && (

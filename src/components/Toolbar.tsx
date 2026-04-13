@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import type { FilterState, ContentType } from '../types/har'
 
 interface ToolbarProps {
@@ -21,14 +22,14 @@ const CONTENT_TYPE_FILTERS: { label: string; value: ContentType | null }[] = [
   { label: 'Other', value: 'other' },
 ]
 
-export function Toolbar({
+export const Toolbar = forwardRef<HTMLInputElement, ToolbarProps>(function Toolbar({
   fileName,
   filter,
   onFilterChange,
   onOpenFile,
   totalEntries,
   filteredEntries,
-}: ToolbarProps) {
+}, ref) {
   const hasFilter = filter.search || filter.contentType || filter.method || filter.statusCode
 
   return (
@@ -51,6 +52,7 @@ export function Toolbar({
           </svg>
         </span>
         <input
+          ref={ref}
           type="text"
           placeholder="Filter URLs..."
           value={filter.search}
@@ -79,4 +81,4 @@ export function Toolbar({
       </div>
     </div>
   )
-}
+})
