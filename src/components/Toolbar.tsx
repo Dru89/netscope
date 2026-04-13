@@ -1,5 +1,7 @@
-import { forwardRef } from 'react'
+import { forwardRef, useCallback } from 'react'
 import type { FilterState, ContentType } from '../types/har'
+import type { FilterSuggestionData } from '../utils/filterSuggestions'
+import { FilterInput } from './FilterInput'
 
 interface ToolbarProps {
   fileName: string
@@ -8,6 +10,7 @@ interface ToolbarProps {
   onOpenFile: () => void
   totalEntries: number
   filteredEntries: number
+  suggestionData: FilterSuggestionData
 }
 
 const CONTENT_TYPE_FILTERS: { label: string; value: ContentType | null }[] = [
@@ -29,8 +32,16 @@ export const Toolbar = forwardRef<HTMLInputElement, ToolbarProps>(function Toolb
   onOpenFile,
   totalEntries,
   filteredEntries,
+  suggestionData,
 }, ref) {
   const hasFilter = filter.search || filter.contentType || filter.method || filter.statusCode
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      onFilterChange({ ...filter, search: value })
+    },
+    [filter, onFilterChange]
+  )
 
   return (
     <div className="toolbar">
@@ -51,14 +62,12 @@ export const Toolbar = forwardRef<HTMLInputElement, ToolbarProps>(function Toolb
             <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
           </svg>
         </span>
-        <input
+        <FilterInput
           ref={ref}
-          type="text"
-          placeholder="Filter (e.g. domain:example.com method:GET)"
           value={filter.search}
-          onChange={(e) =>
-            onFilterChange({ ...filter, search: e.target.value })
-          }
+          onChange={handleSearchChange}
+          suggestionData={suggestionData}
+          placeholder="Filter (e.g. domain:example.com method:GET)"
         />
       </div>
       <div className="toolbar-filters">

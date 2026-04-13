@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import type { Har, HarEntry, FilterState, SortState } from './types/har'
 import { parseHar, getContentType, getEntryName, getTransferSize, computeSummary } from './utils/har'
 import { parseFilterQuery, matchEntry } from './utils/filterParser'
+import { extractSuggestionData } from './utils/filterSuggestions'
 import { Toolbar } from './components/Toolbar'
 import { RequestTable } from './components/RequestTable'
 import { DetailPanel } from './components/DetailPanel'
@@ -248,6 +249,12 @@ function App() {
 
   const summary = har ? computeSummary(har.log.entries) : null
 
+  // Precompute unique values from entries for filter autocomplete
+  const suggestionData = useMemo(
+    () => extractSuggestionData(har?.log.entries ?? []),
+    [har]
+  )
+
   return (
     <div
       className="app"
@@ -267,6 +274,7 @@ function App() {
             onOpenFile={handleOpenFile}
             totalEntries={har.log.entries.length}
             filteredEntries={sortedEntries.length}
+            suggestionData={suggestionData}
           />
           <div className="app-main">
             <div className={`request-list-pane ${detailPanelOpen ? 'with-detail' : ''}`}>

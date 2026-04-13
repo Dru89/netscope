@@ -216,6 +216,49 @@
   color: var(--color-text-tertiary);
 }
 
+/* Filter autocomplete dropdown */
+.filter-suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  font-size: 12px;
+}
+
+.filter-suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.filter-suggestion-item:hover,
+.filter-suggestion-item.selected {
+  background: var(--color-bg-hover);
+}
+
+.filter-suggestion-label {
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.filter-suggestion-description {
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
 .toolbar-filters {
   display: flex;
   gap: 4px;
