@@ -5,7 +5,7 @@ const repoUrl = 'https://github.com/Dru89/netscope'
 const releaseUrl = `${repoUrl}/releases/latest`
 ---
 
-<Layout title="Netscope - Network Inspector for macOS">
+<Layout title="Netscope - Network Inspector for HAR Files">
   <header class="header">
     <div class="container">
       <nav class="nav">
@@ -26,14 +26,16 @@ const releaseUrl = `${repoUrl}/releases/latest`
     <section class="hero">
       <div class="container">
         <img src="/netscope-icon.png" alt="Netscope icon" class="hero-icon" />
-        <h1 class="hero-title">Inspect HAR files<br />on your Mac.</h1>
+        <h1 class="hero-title">Inspect HAR files<br />on your desktop.</h1>
         <p class="hero-subtitle">
-          A native macOS desktop app for viewing and analyzing HTTP Archive files.
+          A desktop app for viewing and analyzing HTTP Archive files.
           The same network inspection experience as Chrome DevTools, but as a standalone app.
+          Available for macOS, Windows, and Linux.
         </p>
-        <div class="hero-actions">
-          <a href={releaseUrl} class="btn btn-primary">Download for macOS</a>
-          <a href={repoUrl} class="btn btn-secondary">View on GitHub</a>
+        <div class="hero-actions download-buttons" data-fallback-url={releaseUrl}>
+          <a class="btn btn-primary download-btn is-loading" data-platform="mac">macOS</a>
+          <a class="btn btn-secondary download-btn is-loading" data-platform="win">Windows</a>
+          <a class="btn btn-secondary download-btn is-loading" data-platform="linux">Linux</a>
         </div>
         <div class="hero-screenshot">
           <img src="/main-screen.png" alt="Netscope showing a list of network requests with waterfall chart" />
@@ -135,7 +137,7 @@ const releaseUrl = `${repoUrl}/releases/latest`
           </div>
           <div class="extra">
             <h4>Code signed</h4>
-            <p>Signed with a Developer ID certificate and notarized by Apple. No Gatekeeper warnings.</p>
+            <p>macOS builds are signed with a Developer ID certificate and notarized by Apple. No Gatekeeper warnings.</p>
           </div>
           <div class="extra">
             <h4>Open source</h4>
@@ -149,9 +151,10 @@ const releaseUrl = `${repoUrl}/releases/latest`
       <div class="container">
         <h2>Ready to explore?</h2>
         <p>Download Netscope and start inspecting your network requests.</p>
-        <div class="hero-actions">
-          <a href={releaseUrl} class="btn btn-primary">Download for macOS</a>
-          <a href={repoUrl} class="btn btn-secondary">View on GitHub</a>
+        <div class="hero-actions download-buttons" data-fallback-url={releaseUrl}>
+          <a class="btn btn-primary download-btn is-loading" data-platform="mac">macOS</a>
+          <a class="btn btn-secondary download-btn is-loading" data-platform="win">Windows</a>
+          <a class="btn btn-secondary download-btn is-loading" data-platform="linux">Linux</a>
         </div>
       </div>
     </section>
@@ -477,4 +480,100 @@ const releaseUrl = `${repoUrl}/releases/latest`
       align-items: center;
     }
   }
+
+  /* Download buttons: loading/disabled state */
+  .download-btn.is-loading {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: default;
+  }
 </style>
+
+<script>
+  const API_URL = 'https://api.github.com/repos/Dru89/netscope/releases/latest'
+  const FALLBACK_URL = 'https://github.com/Dru89/netscope/releases/latest'
+
+  // Map platform keys to asset filename patterns
+  const PLATFORM_PATTERNS = {
+    mac: /\.dmg$/,
+    win: /\.exe$/,
+    linux: /\.AppImage$/,
+  }
+
+  // Detect user's platform for button ordering
+  function detectPlatform() {
+    const ua = navigator.userAgent.toLowerCase()
+    if (ua.includes('mac')) return 'mac'
+    if (ua.includes('win')) return 'win'
+    if (ua.includes('linux')) return 'linux'
+    return null
+  }
+
+  // Promote the user's platform button to primary style
+  function highlightUserPlatform(platform) {
+    document.querySelectorAll('.download-buttons').forEach((group) => {
+      const buttons = group.querySelectorAll('.download-btn')
+      buttons.forEach((btn) => {
+        if (btn.dataset.platform === platform) {
+          btn.classList.remove('btn-secondary')
+          btn.classList.add('btn-primary')
+        } else {
+          btn.classList.remove('btn-primary')
+          btn.classList.add('btn-secondary')
+        }
+      })
+    })
+  }
+
+  async function loadDownloadLinks() {
+    try {
+      const res = await fetch(API_URL)
+      if (!res.ok) throw new Error(`GitHub API returned ${res.status}`)
+      const release = await res.json()
+
+      // Build a map of platform -> download URL
+      const urls = {}
+      for (const asset of release.assets) {
+        for (const [platform, pattern] of Object.entries(PLATFORM_PATTERNS)) {
+          if (pattern.test(asset.name) && !urls[platform]) {
+            // For macOS, prefer the arm64 DMG
+            if (platform === 'mac' && !asset.name.includes('arm64')) continue
+            urls[platform] = asset.browser_download_url
+          }
+        }
+      }
+      // Fall back to any DMG if no arm64 was found
+      if (!urls.mac) {
+        const dmg = release.assets.find((a) => /\.dmg$/.test(a.name))
+        if (dmg) urls.mac = dmg.browser_download_url
+      }
+
+      // Activate buttons that have a download URL
+      document.querySelectorAll('.download-btn').forEach((btn) => {
+        const platform = btn.dataset.platform
+        if (urls[platform]) {
+          btn.href = urls[platform]
+          btn.classList.remove('is-loading')
+        } else {
+          // No asset for this platform — link to releases page
+          btn.href = FALLBACK_URL
+          btn.classList.remove('is-loading')
+        }
+      })
+
+      // Highlight the user's platform
+      const userPlatform = detectPlatform()
+      if (userPlatform) highlightUserPlatform(userPlatform)
+
+    } catch {
+      // API failed — replace all buttons with a single fallback
+      document.querySelectorAll('.download-buttons').forEach((group) => {
+        group.innerHTML =
+          `<a href="${FALLBACK_URL}" class="btn btn-primary">Download</a>` +
+          `<a href="https://github.com/Dru89/netscope" class="btn btn-secondary">View on GitHub</a>`
+      })
+    }
+  }
+
+  loadDownloadLinks()
+</script>
