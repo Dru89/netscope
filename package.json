@@ -17,7 +17,9 @@
     "preview": "vite preview",
     "electron:dev": "vite --mode electron",
     "site:dev": "npm run dev --prefix site",
-    "site:build": "npm run build --prefix site"
+    "site:build": "npm run build --prefix site",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "electron-updater": "^6.8.3",
@@ -35,7 +37,8 @@
     "typescript": "^5.3.3",
     "vite": "^5.0.8",
     "vite-plugin-electron": "^0.28.0",
-    "vite-plugin-electron-renderer": "^0.14.5"
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "vitest": "^4.1.4"
   },
   "build": {
     "appId": "com.netscope.app",

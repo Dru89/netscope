@@ -54,7 +54,7 @@ export const Toolbar = forwardRef<HTMLInputElement, ToolbarProps>(function Toolb
         <input
           ref={ref}
           type="text"
-          placeholder="Filter URLs..."
+          placeholder="Filter (e.g. domain:example.com method:GET)"
           value={filter.search}
           onChange={(e) =>
             onFilterChange({ ...filter, search: e.target.value })

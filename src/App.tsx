@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import type { Har, HarEntry, FilterState, SortState } from './types/har'
 import { parseHar, getContentType, getEntryName, getTransferSize, computeSummary } from './utils/har'
+import { parseFilterQuery, matchEntry } from './utils/filterParser'
 import { Toolbar } from './components/Toolbar'
 import { RequestTable } from './components/RequestTable'
 import { DetailPanel } from './components/DetailPanel'
@@ -190,19 +191,19 @@ function App() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [detailPanelOpen])
 
+  // Parse the search string into structured filter tokens
+  const filterTokens = useMemo(
+    () => parseFilterQuery(filter.search),
+    [filter.search]
+  )
+
   // Filter and sort entries
   const filteredEntries = har
     ? har.log.entries.filter((entry) => {
-        if (filter.search) {
-          const searchLower = filter.search.toLowerCase()
-          const urlMatch = entry.request.url
-            .toLowerCase()
-            .includes(searchLower)
-          const nameMatch = getEntryName(entry)
-            .toLowerCase()
-            .includes(searchLower)
-          if (!urlMatch && !nameMatch) return false
-        }
+        // Apply structured filter tokens from the search input
+        if (filterTokens.length > 0 && !matchEntry(filterTokens, entry))
+          return false
+        // Apply toolbar button filters (these are separate from the text input)
         if (filter.method && entry.request.method !== filter.method)
           return false
         if (filter.statusCode) {
