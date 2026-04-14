@@ -4,9 +4,11 @@
 
 # Netscope
 
-A native macOS desktop application for viewing and analyzing HTTP Archive (HAR) files. Built with Electron, React, and TypeScript.
+A desktop application for viewing and analyzing HTTP Archive (HAR) files. Available for macOS, Windows, and Linux. Built with Electron, React, and TypeScript.
 
-Netscope gives you the same network inspection experience as Chrome DevTools, but as a standalone app -- open HAR files from Finder, filter and sort requests, inspect headers and timing, and search through raw source data.
+**[netscopeapp.com](https://netscopeapp.com)**
+
+Netscope gives you the same network inspection experience as Chrome DevTools, but as a standalone app -- open HAR files, filter and sort requests, inspect headers and timing, and search through raw source data. HAR files often contain sensitive session data like cookies and auth tokens, so everything stays local on your machine.
 
 ![Netscope main screen showing a list of network requests](images/main-screen.png)
 
@@ -38,7 +40,7 @@ The Timing tab visualizes the request lifecycle -- queueing, stalled, send, wait
 
 ### Source search
 
-The Source tab shows the raw HAR JSON for any entry. Open the search bar with Cmd+F, type a query, and matching text is highlighted inline. Navigate between matches with Enter, Shift+Enter, or Cmd+G.
+The Source tab shows the raw HAR JSON for any entry. Open the search bar with Cmd+F / Ctrl+F, type a query, and matching text is highlighted inline. Navigate between matches with Enter, Shift+Enter, or Cmd+G / Ctrl+G.
 
 ![Source tab with search highlighting](images/details-raw-with-search.png)
 
@@ -50,16 +52,20 @@ Switch between System, Light, and Dark themes using the toggle in the bottom-rig
 
 ### Other features
 
-- **Three ways to open files** -- Use File > Open (Cmd+O), drag-and-drop onto the window, or double-click `.har` files in Finder
+- **Three ways to open files** -- Use File > Open (Cmd+O / Ctrl+O), drag-and-drop onto the window, or double-click `.har` files in your file manager
 - **Multi-window support** -- Each HAR file opens in its own window; re-opening an already-open file focuses the existing window
 - **Disk cache detection** -- Responses served from the browser cache are labeled "(from disk cache)" on the status code
 - **Summary bar** -- Aggregate stats at the bottom: total requests, transfer size, resource size, total time, and breakdown by type
 - **Response preview** -- Auto-formatted JSON, rendered base64 images, and raw text display
-- **Code-signed and notarized** -- Signed with a Developer ID certificate and notarized by Apple, so macOS Gatekeeper won't block it
+- **Code-signed and notarized** -- macOS builds are signed with a Developer ID certificate and notarized by Apple, so Gatekeeper won't block them
 
 ## Installation
 
-Download the latest `.dmg` from [Releases](https://github.com/Dru89/netscope/releases), open it, and drag Netscope to your Applications folder.
+Download the latest release for your platform from [Releases](https://github.com/Dru89/netscope/releases).
+
+### macOS
+
+Download the `.dmg`, open it, and drag Netscope to your Applications folder. The app is code-signed and notarized, so Gatekeeper should not block it.
 
 To set Netscope as the default handler for `.har` files:
 
@@ -68,42 +74,30 @@ To set Netscope as the default handler for `.har` files:
 3. Under **Open with**, select **Netscope**
 4. Click **Change All...**
 
-## Development
+### Windows
+
+Download the `.exe` installer and run it. Windows builds are unsigned, so you may see a SmartScreen warning on first launch -- click **More info** then **Run anyway** to proceed.
+
+### Linux
+
+Download the `.AppImage` or `.deb` from the Releases page.
+
+For the AppImage, make it executable and run it:
 
 ```bash
-# Install dependencies
-npm install
-
-# Run in development mode (hot reload)
-npm run dev
-
-# Build the packaged .app and .dmg (unsigned)
-npm run build
-
-# Build, sign, notarize, and publish to GitHub Releases
-npm run release
+chmod +x Netscope-*.AppImage
+./Netscope-*.AppImage
 ```
 
-### Release builds
+For Debian/Ubuntu, install the `.deb` directly:
 
-The `release` script signs the app with a Developer ID certificate, notarizes it with Apple, and uploads the DMG to GitHub Releases. It requires credentials in a `.env` file -- see [`.env.example`](.env.example) for the required variables.
+```bash
+sudo dpkg -i netscope_*.deb
+```
 
-### Scripts
+## Development
 
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start Vite dev server + Electron with hot reload |
-| `npm run build` | Type-check, bundle, and package the app with electron-builder |
-| `npm run build:vite` | Type-check and bundle only (no electron-builder packaging) |
-| `npm run release` | Tag, build, sign, notarize, and publish to GitHub Releases |
-
-## Tech Stack
-
-- **Electron 28** -- Desktop runtime with native macOS integration
-- **React 18** -- UI framework
-- **TypeScript 5** -- Type safety
-- **Vite 5** -- Build tooling and dev server
-- **electron-builder** -- Packaging and distribution
+Built with Electron, React, TypeScript, and Vite. See [docs/development.md](docs/development.md) for setup instructions, scripts, and the release process.
 
 ## License
 

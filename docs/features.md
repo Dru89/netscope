@@ -217,17 +217,17 @@ The bottom bar shows aggregate statistics for the entire HAR file (not affected 
 
 ---
 
-## System Theme
+## Theme
 
-Netscope follows the macOS system appearance setting. When you switch between Light and Dark mode in System Settings, the app updates automatically. There is no manual toggle -- it always matches your system preference.
+Netscope supports three theme modes: **System**, **Light**, and **Dark**. Switch between them using the toggle in the bottom-right corner of the summary bar. Your preference is saved to `localStorage` and persists across sessions.
 
-The theme is implemented with CSS custom properties and a `@media (prefers-color-scheme: dark)` query, so the transition is instantaneous with no flash.
+In System mode, the app follows your operating system's appearance setting automatically. The theme is implemented with CSS custom properties and a `@media (prefers-color-scheme: dark)` query, so transitions are instantaneous with no flash.
 
 ---
 
 ## Window Behavior
 
-- The title bar uses the macOS `hiddenInset` style with native traffic light buttons (close/minimize/fullscreen) positioned in the upper left
+- The title bar uses the macOS `hiddenInset` style with native traffic light buttons (close/minimize/fullscreen) positioned in the upper left. On Windows and Linux, the default system title bar is used.
 - The title bar area is draggable for moving the window
 - Minimum window size is 900x600 pixels
 - The detail panel takes up 50% of the width when open, with the request list occupying the other 50%

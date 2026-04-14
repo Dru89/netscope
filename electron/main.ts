@@ -7,14 +7,17 @@ const windows = new Set<BrowserWindow>()
 const windowFilePaths = new Map<BrowserWindow, string>()
 let pendingFile: string | null = null
 
+const isMac = process.platform === 'darwin'
+
 function createWindow(fileToOpen?: string): BrowserWindow {
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 900,
     minHeight: 600,
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 16, y: 16 },
+    ...(isMac
+      ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 16, y: 16 } }
+      : {}),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -169,20 +172,25 @@ nativeTheme.on('updated', () => {
 // Build application menu
 function buildMenu() {
   const template: Electron.MenuItemConstructorOptions[] = [
-    {
-      label: app.name,
-      submenu: [
-        { role: 'about' },
-        { type: 'separator' },
-        { role: 'services' },
-        { type: 'separator' },
-        { role: 'hide' },
-        { role: 'hideOthers' },
-        { role: 'unhide' },
-        { type: 'separator' },
-        { role: 'quit' },
-      ],
-    },
+    // macOS app menu (About, Services, Hide, Quit)
+    ...(isMac
+      ? [
+          {
+            label: app.name,
+            submenu: [
+              { role: 'about' as const },
+              { type: 'separator' as const },
+              { role: 'services' as const },
+              { type: 'separator' as const },
+              { role: 'hide' as const },
+              { role: 'hideOthers' as const },
+              { role: 'unhide' as const },
+              { type: 'separator' as const },
+              { role: 'quit' as const },
+            ],
+          },
+        ]
+      : []),
     {
       label: 'File',
       submenu: [
@@ -209,7 +217,7 @@ function buildMenu() {
           },
         },
         { type: 'separator' },
-        { role: 'close' },
+        ...(isMac ? [{ role: 'close' as const }] : [{ role: 'quit' as const }]),
       ],
     },
     {
@@ -242,9 +250,13 @@ function buildMenu() {
       label: 'Window',
       submenu: [
         { role: 'minimize' },
-        { role: 'zoom' },
-        { type: 'separator' },
-        { role: 'front' },
+        ...(isMac
+          ? [
+              { role: 'zoom' as const },
+              { type: 'separator' as const },
+              { role: 'front' as const },
+            ]
+          : [{ role: 'close' as const }]),
       ],
     },
   ]
@@ -288,7 +300,7 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
-  app.quit()
+  if (!isMac) app.quit()
 })
 
 app.on('activate', () => {

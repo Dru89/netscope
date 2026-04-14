@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**Netscope** is a native macOS desktop app for viewing and analyzing HTTP Archive (HAR) files. It provides a Chrome DevTools-like network inspection experience as a standalone app. Built with Electron 28, React 18, TypeScript 5, and Vite 5.
+**Netscope** is a desktop app for viewing and analyzing HTTP Archive (HAR) files, available for macOS, Windows, and Linux. It provides a Chrome DevTools-like network inspection experience as a standalone app. Built with Electron 28, React 18, TypeScript 5, and Vite 5.
 
 - **Package name:** `netscope`
 - **App ID:** `com.netscope.app`
@@ -13,7 +13,7 @@
 
 Netscope is an Electron app with three process layers:
 
-1. **Main process** (`electron/main.ts`) -- Node.js runtime handling window management, file I/O, native menus, macOS file associations, theme detection, and auto-updates (`electron-updater`). Manages multiple windows via a `Set<BrowserWindow>` and tracks loaded files in a `Map<BrowserWindow, string>`.
+1. **Main process** (`electron/main.ts`) -- Node.js runtime handling window management, file I/O, native menus, file associations (macOS Finder, command-line args on all platforms), theme detection, and auto-updates (`electron-updater`). Manages multiple windows via a `Set<BrowserWindow>` and tracks loaded files in a `Map<BrowserWindow, string>`. Platform-specific behavior (title bar style, app menu, quit-on-close) is guarded by an `isMac` constant.
 
 2. **Preload script** (`electron/preload.ts`) -- Bridge layer using `contextBridge.exposeInMainWorld` to expose a typed `window.electronAPI` with 6 methods. This is the only communication channel between main and renderer.
 
@@ -41,7 +41,7 @@ site/               Marketing website (Astro 5, deployed to Netlify)
   src/layouts/      Base HTML layout with global CSS
   src/pages/        Single-page landing site (index.astro)
   public/           Static assets (favicons, screenshots)
-docs/               Internal docs (architecture.md, features.md, har-format.md)
+docs/               Internal docs (architecture.md, development.md, features.md, har-format.md, macos-document-icons.md)
 ```
 
 **Build outputs (all git-ignored):** `dist/` (Vite output), `dist-electron/` (bundled main/preload), `release/` (electron-builder .app/.dmg/.zip).
