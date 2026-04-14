@@ -3,10 +3,18 @@ const path = require('path')
 const fs = require('fs')
 
 /**
- * afterPack hook that adds UTExportedTypeDeclarations to Info.plist.
- * This declares .har as a proper document type so macOS auto-generates
- * the document icon shape (page with folded corner) with our icon as
- * the badge, rather than using the raw icon file as the full file icon.
+ * afterPack hook that adds UTExportedTypeDeclarations to Info.plist
+ * and removes document-level icon references.
+ *
+ * By declaring the .har UTI *without* a UTTypeIconFile, macOS
+ * auto-generates the Big Sur+ document icon: white page with folded
+ * corner, the Netscope app icon as a centered badge, and the "HAR"
+ * extension as a text label. Providing any icon file (UTTypeIconFile,
+ * CFBundleTypeIconFile) causes macOS to use that file as-is instead
+ * of generating the native treatment.
+ *
+ * Conforms to public.data only. Adding public.json would cause macOS
+ * to show a JSON text preview instead of our document icon.
  */
 exports.default = async function afterPack(context) {
   const { electronPlatformName, appOutDir } = context
@@ -21,45 +29,43 @@ exports.default = async function afterPack(context) {
     return
   }
 
+  const plistBuddy = '/usr/libexec/PlistBuddy'
+  const pb = (cmd) => execSync(`${plistBuddy} -c "${cmd}" "${plistPath}"`)
+
+  // -- Remove any document-type icon references that electron-builder
+  //    injected via fileAssociations.icon. These override the native
+  //    auto-generated icon if present.
+  console.log('Removing CFBundleTypeIconFile from document types...')
+  try {
+    pb('Delete :CFBundleDocumentTypes:0:CFBundleTypeIconFile')
+  } catch {
+    // Key may not exist — that's fine
+  }
+
+  // -- Add UTExportedTypeDeclarations for .har
+  //    No UTTypeIconFile — this is what triggers the native page curl.
   console.log('Injecting UTExportedTypeDeclarations into Info.plist...')
 
-  // Add the UTExportedTypeDeclarations array with our HAR file type
-  const plistBuddy = '/usr/libexec/PlistBuddy'
-
   const cmds = [
-    // Create the UTExportedTypeDeclarations array
-    `-c "Add :UTExportedTypeDeclarations array"`,
-    `-c "Add :UTExportedTypeDeclarations:0 dict"`,
-
-    // UTI identifier
-    `-c "Add :UTExportedTypeDeclarations:0:UTTypeIdentifier string com.netscope.har"`,
-
-    // Human-readable description
-    `-c "Add :UTExportedTypeDeclarations:0:UTTypeDescription string HAR File"`,
-
-    // Icon file
-    `-c "Add :UTExportedTypeDeclarations:0:UTTypeIconFile string har-icon.icns"`,
-
-    // Conforms to public.data only — no public.json, because macOS
-    // will show a JSON text preview instead of our icon if it thinks
-    // the file is JSON.
-    `-c "Add :UTExportedTypeDeclarations:0:UTTypeConformsTo array"`,
-    `-c "Add :UTExportedTypeDeclarations:0:UTTypeConformsTo:0 string public.data"`,
-
-    // Tag specification: file extension
-    `-c "Add :UTExportedTypeDeclarations:0:UTTypeTagSpecification dict"`,
-    `-c "Add :UTExportedTypeDeclarations:0:UTTypeTagSpecification:public.filename-extension array"`,
-    `-c "Add :UTExportedTypeDeclarations:0:UTTypeTagSpecification:public.filename-extension:0 string har"`,
+    'Add :UTExportedTypeDeclarations array',
+    'Add :UTExportedTypeDeclarations:0 dict',
+    'Add :UTExportedTypeDeclarations:0:UTTypeIdentifier string com.netscope.har',
+    'Add :UTExportedTypeDeclarations:0:UTTypeDescription string HAR File',
+    'Add :UTExportedTypeDeclarations:0:UTTypeConformsTo array',
+    'Add :UTExportedTypeDeclarations:0:UTTypeConformsTo:0 string public.data',
+    'Add :UTExportedTypeDeclarations:0:UTTypeTagSpecification dict',
+    'Add :UTExportedTypeDeclarations:0:UTTypeTagSpecification:public.filename-extension array',
+    'Add :UTExportedTypeDeclarations:0:UTTypeTagSpecification:public.filename-extension:0 string har',
   ]
 
   for (const cmd of cmds) {
-    execSync(`${plistBuddy} ${cmd} "${plistPath}"`)
+    pb(cmd)
   }
 
-  // Also update the CFBundleDocumentTypes to reference the UTI
+  // -- Link CFBundleDocumentTypes to our UTI
   try {
-    execSync(`${plistBuddy} -c "Add :CFBundleDocumentTypes:0:LSItemContentTypes array" "${plistPath}"`)
-    execSync(`${plistBuddy} -c "Add :CFBundleDocumentTypes:0:LSItemContentTypes:0 string com.netscope.har" "${plistPath}"`)
+    pb('Add :CFBundleDocumentTypes:0:LSItemContentTypes array')
+    pb('Add :CFBundleDocumentTypes:0:LSItemContentTypes:0 string com.netscope.har')
   } catch {
     // LSItemContentTypes might already exist
   }
