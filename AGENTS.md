@@ -213,6 +213,7 @@ Site favicons in `site/public/` are also derived from the source image. If the i
 - `contextIsolation: true` and `nodeIntegration: false` -- the renderer cannot access Node.js APIs directly.
 - The marketing site is a separate Astro project in `site/`, deployed to Netlify (configured in `netlify.toml` at the repo root).
 - When bumping versions, update `version` in `package.json` and run `npm install --package-lock-only` to sync `package-lock.json`.
+- **Do not bump the version in `package.json` as part of code change commits.** Version bumps are handled exclusively through `make release VERSION=<patch|minor|major>`, which bumps, commits, tags, and pushes in one step. Keep code changes and version bumps in separate commits.
 
 ## Keeping This File Up to Date
 
