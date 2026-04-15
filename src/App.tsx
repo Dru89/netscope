@@ -1,5 +1,12 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import type { Har, HarEntry, FilterState, SortState } from "./types/har";
+import type {
+  Har,
+  HarEntry,
+  FilterState,
+  SortState,
+  SortField,
+  SortDirection,
+} from "./types/har";
 import {
   parseHar,
   getContentType,
@@ -154,6 +161,18 @@ function App() {
     setDetailPanelOpen(false);
   }, []);
 
+  // Listen for sort changes from the context menu
+  useEffect(() => {
+    if (!window.electronAPI) return;
+    const cleanup = window.electronAPI.onContextMenuSort((newSort) => {
+      setSort({
+        field: newSort.field as SortField,
+        direction: newSort.direction as SortDirection,
+      });
+    });
+    return cleanup;
+  }, []);
+
   const filterInputRef = useRef<HTMLInputElement>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -268,6 +287,20 @@ function App() {
 
   const summary = har ? computeSummary(har.log.entries) : null;
 
+  // Right-click context menu on request rows
+  const handleContextMenu = useCallback(
+    (entry: HarEntry) => {
+      if (!window.electronAPI) return;
+      window.electronAPI.showRequestContextMenu({
+        entry,
+        allEntries: filteredEntries,
+        sortField: sort.field,
+        sortDirection: sort.direction,
+      });
+    },
+    [filteredEntries, sort],
+  );
+
   // Precompute unique values from entries for filter autocomplete
   const suggestionData = useMemo(
     () => extractSuggestionData(har?.log.entries ?? []),
@@ -302,6 +335,7 @@ function App() {
                 onSelectEntry={handleSelectEntryOnly}
                 onClickEntry={handleSelectEntry}
                 onToggleDetail={handleToggleDetail}
+                onContextMenu={handleContextMenu}
                 sort={sort}
                 onSortChange={setSort}
                 containerRef={tableContainerRef}

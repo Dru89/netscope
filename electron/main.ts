@@ -1,6 +1,7 @@
 import {
   app,
   BrowserWindow,
+  clipboard,
   dialog,
   ipcMain,
   nativeTheme,
@@ -10,6 +11,14 @@ import {
 import { autoUpdater } from "electron-updater";
 import path from "path";
 import fs from "fs";
+import {
+  toCurl,
+  toFetch,
+  toFetchNode,
+  toPowerShell,
+  getResponseBody,
+} from "../src/utils/copyFormatters";
+import type { HarEntry, SortField, SortDirection } from "../src/types/har";
 
 const windows = new Set<BrowserWindow>();
 const windowFilePaths = new Map<BrowserWindow, string>();
@@ -354,6 +363,139 @@ ipcMain.handle(
   "set-theme-mode",
   (_event, mode: "system" | "light" | "dark") => {
     nativeTheme.themeSource = mode;
+  },
+);
+
+// Handle request row context menu
+ipcMain.on(
+  "show-request-context-menu",
+  (
+    event,
+    data: {
+      entry: HarEntry;
+      allEntries: HarEntry[];
+      sortField: SortField;
+      sortDirection: SortDirection;
+    },
+  ) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return;
+
+    const { entry, allEntries, sortField, sortDirection } = data;
+
+    const SORT_FIELDS: { label: string; field: SortField }[] = [
+      { label: "Name", field: "name" },
+      { label: "Method", field: "method" },
+      { label: "Status", field: "status" },
+      { label: "Type", field: "type" },
+      { label: "Size", field: "size" },
+      { label: "Time", field: "time" },
+      { label: "Waterfall", field: "waterfall" },
+    ];
+
+    const template: Electron.MenuItemConstructorOptions[] = [
+      {
+        label: "Open in Browser",
+        click: () => {
+          shell.openExternal(entry.request.url);
+        },
+      },
+      { type: "separator" },
+      {
+        label: "Copy",
+        submenu: [
+          {
+            label: "Copy URL",
+            click: () => clipboard.writeText(entry.request.url),
+          },
+          { type: "separator" },
+          {
+            label: "Copy as cURL",
+            click: () => clipboard.writeText(toCurl(entry)),
+          },
+          {
+            label: "Copy as fetch",
+            click: () => clipboard.writeText(toFetch(entry)),
+          },
+          {
+            label: "Copy as fetch (Node.js)",
+            click: () => clipboard.writeText(toFetchNode(entry)),
+          },
+          {
+            label: "Copy as PowerShell",
+            click: () => clipboard.writeText(toPowerShell(entry)),
+          },
+          { type: "separator" },
+          {
+            label: "Copy Response",
+            click: () => clipboard.writeText(getResponseBody(entry)),
+          },
+          { type: "separator" },
+          {
+            label: "Copy All Listed URLs",
+            click: () =>
+              clipboard.writeText(
+                allEntries.map((e) => e.request.url).join("\n"),
+              ),
+          },
+          {
+            label: "Copy All Listed as cURL",
+            click: () =>
+              clipboard.writeText(
+                allEntries.map((e) => toCurl(e)).join("\n\n"),
+              ),
+          },
+          {
+            label: "Copy All Listed as fetch",
+            click: () =>
+              clipboard.writeText(
+                allEntries.map((e) => toFetch(e)).join("\n\n"),
+              ),
+          },
+          {
+            label: "Copy All Listed as fetch (Node.js)",
+            click: () =>
+              clipboard.writeText(
+                allEntries.map((e) => toFetchNode(e)).join("\n\n"),
+              ),
+          },
+          {
+            label: "Copy All Listed as PowerShell",
+            click: () =>
+              clipboard.writeText(
+                allEntries.map((e) => toPowerShell(e)).join("\n\n"),
+              ),
+          },
+        ],
+      },
+      { type: "separator" },
+      {
+        label: "Sort By",
+        submenu: SORT_FIELDS.map(({ label, field }) => ({
+          label:
+            field === sortField
+              ? `${label} (${sortDirection === "asc" ? "↑" : "↓"})`
+              : label,
+          type: "checkbox" as const,
+          checked: field === sortField,
+          click: () => {
+            // Toggle direction if same field, otherwise default to ascending
+            const newDirection: SortDirection =
+              field === sortField
+                ? sortDirection === "asc"
+                  ? "desc"
+                  : "asc"
+                : "asc";
+            win.webContents.send("context-menu-sort", {
+              field,
+              direction: newDirection,
+            });
+          },
+        })),
+      },
+    ];
+
+    Menu.buildFromTemplate(template).popup({ window: win });
   },
 );
 

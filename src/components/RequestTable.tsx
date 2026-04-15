@@ -20,6 +20,7 @@ interface RequestTableProps {
   onSelectEntry: (entry: HarEntry) => void;
   onClickEntry: (entry: HarEntry) => void;
   onToggleDetail: (entry: HarEntry) => void;
+  onContextMenu?: (entry: HarEntry) => void;
   sort: SortState;
   onSortChange: (sort: SortState) => void;
   containerRef?: React.RefObject<HTMLDivElement | null>;
@@ -32,6 +33,7 @@ export function RequestTable({
   onSelectEntry,
   onClickEntry,
   onToggleDetail,
+  onContextMenu,
   sort,
   onSortChange,
   containerRef: externalContainerRef,
@@ -280,6 +282,11 @@ export function RequestTable({
                 data-entry-index={entry._index}
                 className={`row ${isSelected ? "selected" : ""} ${isError ? "error-row" : ""}`}
                 onClick={() => onClickEntry(entry)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  onSelectEntry(entry);
+                  onContextMenu?.(entry);
+                }}
                 title={entry.request.url}
               >
                 <td className="col-name">

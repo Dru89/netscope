@@ -13,6 +13,10 @@ export interface ElectronAPI {
   getNativeTheme: () => Promise<"dark" | "light">;
   setThemeMode: (mode: "system" | "light" | "dark") => Promise<void>;
   signalReady: () => void;
+  showRequestContextMenu: (data: unknown) => void;
+  onContextMenuSort: (
+    callback: (sort: { field: string; direction: string }) => void,
+  ) => () => void;
   onHarFileOpened: (
     callback: (data: {
       filePath: string;
