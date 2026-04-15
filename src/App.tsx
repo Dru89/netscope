@@ -96,7 +96,7 @@ function App() {
         const file = files[0];
         if (window.electronAPI) {
           // In Electron, read file via main process using the path
-          const filePath = (file as any).path;
+          const filePath = window.electronAPI.getPathForFile(file);
           if (filePath) {
             const result = await window.electronAPI.readHarFile(filePath);
             if (result) {
@@ -135,17 +135,18 @@ function App() {
   }, []);
 
   // Toggle the detail panel for an entry (used by Enter/Space)
-  const handleToggleDetail = useCallback((entry: HarEntry) => {
-    setSelectedEntry((prev) => {
-      const isSameEntry = prev?._index === entry._index;
+  const handleToggleDetail = useCallback(
+    (entry: HarEntry) => {
+      const isSameEntry = selectedEntry?._index === entry._index;
+      setSelectedEntry(entry);
       if (isSameEntry) {
         setDetailPanelOpen((open) => !open);
       } else {
         setDetailPanelOpen(true);
       }
-      return entry;
-    });
-  }, []);
+    },
+    [selectedEntry],
+  );
 
   const handleCloseDetail = useCallback(() => {
     setDetailPanelOpen(false);

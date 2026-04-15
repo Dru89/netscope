@@ -359,12 +359,16 @@ function buildMenu() {
               ],
             });
             if (!result.canceled && result.filePaths.length > 0) {
-              if (focusedWindow && !windowFilePaths.has(focusedWindow)) {
+              const filePath = result.filePaths[0];
+              const existing = findWindowForFile(filePath);
+              if (existing) {
+                existing.focus();
+              } else if (focusedWindow && !windowFilePaths.has(focusedWindow)) {
                 // Window is on the welcome screen — load in place
-                sendFileToWindow(focusedWindow, result.filePaths[0]);
+                sendFileToWindow(focusedWindow, filePath);
               } else {
                 // Window already has a file, or no focused window — open in new window
-                openFileInNewWindow(result.filePaths[0]);
+                openFileInNewWindow(filePath);
               }
             }
           },
@@ -425,17 +429,7 @@ function buildMenu() {
       ],
     },
     {
-      label: "Window",
-      submenu: [
-        { role: "minimize" },
-        ...(isMac
-          ? [
-              { role: "zoom" as const },
-              { type: "separator" as const },
-              { role: "front" as const },
-            ]
-          : [{ role: "close" as const }]),
-      ],
+      role: "windowMenu",
     },
     {
       role: "help",

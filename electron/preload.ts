@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, webUtils } from "electron";
 
 export interface HarFileData {
   filePath: string;
@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("open-file-dialog"),
   readHarFile: (filePath: string): Promise<HarFileData | null> =>
     ipcRenderer.invoke("read-har-file", filePath),
+  getPathForFile: (file: File): string => webUtils.getPathForFile(file),
   getNativeTheme: (): Promise<"dark" | "light"> =>
     ipcRenderer.invoke("get-native-theme"),
   setThemeMode: (mode: "system" | "light" | "dark"): Promise<void> =>
