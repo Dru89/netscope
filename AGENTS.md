@@ -222,7 +222,7 @@ Releases are built and published by **GitHub Actions** (`.github/workflows/relea
 
 ### Auto-updates
 
-`electron-updater` is configured with the `github` provider. On each platform, it looks for the matching `latest-*.yml` manifest in GitHub Releases and downloads updates silently. Updates install on next app quit. No additional server or update feed is needed.
+`electron-updater` is configured with the `github` provider. On each platform, it looks for the matching `latest-*.yml` manifest in GitHub Releases. When an update is found, the user is prompted with three options: Install Update, Remind Me Later, or Skip This Version. Skipped versions are persisted in `preferences.json` in the app's userData directory and won't be prompted again until a newer version is available. No additional server or update feed is needed.
 
 ## App Icon
 
