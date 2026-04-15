@@ -134,6 +134,23 @@ export function FilterInput({
     }
   }, [selectedIndex, isOpen]);
 
+  // Close dropdown when clicking outside the input and dropdown
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        inputRef.current?.contains(target) ||
+        dropdownRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
+  }, [isOpen]);
+
   return (
     <>
       <input

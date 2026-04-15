@@ -39,11 +39,15 @@ let pendingUpdateVersion: string | null = null;
 
 const isMac = process.platform === "darwin";
 const CASCADE_OFFSET = 28;
+let lastCreatedWindow: BrowserWindow | null = null;
 
 function getCascadePosition(): { x: number; y: number } | undefined {
-  const focused = BrowserWindow.getFocusedWindow();
-  if (!focused) return undefined;
-  const [x, y] = focused.getPosition();
+  // Cascade from the most recently created window, not the focused one,
+  // so that new windows always stack below the previous one regardless
+  // of which window the user has focused.
+  const reference = lastCreatedWindow ?? BrowserWindow.getFocusedWindow();
+  if (!reference || reference.isDestroyed()) return undefined;
+  const [x, y] = reference.getPosition();
   return { x: x + CASCADE_OFFSET, y: y + CASCADE_OFFSET };
 }
 
@@ -71,6 +75,7 @@ function createWindow(fileToOpen?: string): BrowserWindow {
   });
 
   windows.add(win);
+  lastCreatedWindow = win;
 
   win.once("ready-to-show", () => {
     win.show();
@@ -89,6 +94,9 @@ function createWindow(fileToOpen?: string): BrowserWindow {
   win.on("closed", () => {
     windows.delete(win);
     windowFilePaths.delete(win);
+    if (lastCreatedWindow === win) {
+      lastCreatedWindow = null;
+    }
   });
 
   return win;
