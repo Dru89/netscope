@@ -37,6 +37,30 @@ function removeRecentDocument(filePath: string) {
 let pendingFile: string | null = null;
 let pendingUpdateVersion: string | null = null;
 
+const prefsPath = path.join(app.getPath("userData"), "preferences.json");
+
+function readPrefs(): Record<string, unknown> {
+  try {
+    return JSON.parse(fs.readFileSync(prefsPath, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+function writePrefs(prefs: Record<string, unknown>) {
+  fs.writeFileSync(prefsPath, JSON.stringify(prefs, null, 2));
+}
+
+function getSkippedVersion(): string | null {
+  return (readPrefs().skippedUpdateVersion as string) ?? null;
+}
+
+function setSkippedVersion(version: string) {
+  const prefs = readPrefs();
+  prefs.skippedUpdateVersion = version;
+  writePrefs(prefs);
+}
+
 const isMac = process.platform === "darwin";
 const CASCADE_OFFSET = 28;
 let lastCreatedWindow: BrowserWindow | null = null;
@@ -274,6 +298,49 @@ nativeTheme.on("updated", () => {
 // Track when an update has been downloaded
 autoUpdater.on("update-downloaded", (info) => {
   pendingUpdateVersion = info.version;
+  updateAboutPanel();
+
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  const dialogOptions = {
+    type: "info" as const,
+    message: "Update Ready",
+    detail: `Version ${info.version} has been downloaded. Restart to install.`,
+    buttons: ["Restart Now", "Later"],
+    defaultId: 0,
+  };
+  const showDialog = focusedWindow
+    ? dialog.showMessageBox(focusedWindow, dialogOptions)
+    : dialog.showMessageBox(dialogOptions);
+  showDialog.then((result) => {
+    if (result.response === 0) {
+      autoUpdater.quitAndInstall();
+    }
+  });
+});
+
+// Prompt the user when an update is available (before downloading)
+autoUpdater.on("update-available", (info) => {
+  const skippedVersion = getSkippedVersion();
+  if (skippedVersion === info.version) return;
+
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  const dialogOptions = {
+    type: "info" as const,
+    message: "Update Available",
+    detail: `A new version of Netscope (${info.version}) is available. Would you like to download and install it?`,
+    buttons: ["Install Update", "Remind Me Later", "Skip This Version"],
+    defaultId: 0,
+  };
+  const showDialog = focusedWindow
+    ? dialog.showMessageBox(focusedWindow, dialogOptions)
+    : dialog.showMessageBox(dialogOptions);
+  showDialog.then((result) => {
+    if (result.response === 0) {
+      autoUpdater.downloadUpdate();
+    } else if (result.response === 2) {
+      setSkippedVersion(info.version);
+    }
+  });
 });
 
 // Update the macOS About panel options (called on launch and when an update is downloaded)
@@ -503,9 +570,9 @@ app.whenReady().then(() => {
   createWindow(pendingFile || undefined);
   pendingFile = null;
 
-  // Check for updates silently — download in the background, install on quit
-  autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
+  // Check for updates — prompt the user before downloading
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.logger = null; // Suppress verbose logging
   autoUpdater.checkForUpdates();
 });
