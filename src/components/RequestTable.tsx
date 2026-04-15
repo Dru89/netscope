@@ -22,7 +22,7 @@ interface RequestTableProps {
   onToggleDetail: (entry: HarEntry) => void;
   sort: SortState;
   onSortChange: (sort: SortState) => void;
-  containerRef?: React.RefObject<HTMLDivElement>;
+  containerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 export function RequestTable({

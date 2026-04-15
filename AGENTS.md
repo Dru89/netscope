@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**Netscope** is a desktop app for viewing and analyzing HTTP Archive (HAR) files, available for macOS, Windows, and Linux. It provides a Chrome DevTools-like network inspection experience as a standalone app. Built with Electron 28, React 18, TypeScript 5, and Vite 5.
+**Netscope** is a desktop app for viewing and analyzing HTTP Archive (HAR) files, available for macOS, Windows, and Linux. It provides a Chrome DevTools-like network inspection experience as a standalone app. Built with Electron 41, React 19, TypeScript 6, and Vite 5.
 
 - **Package name:** `netscope`
 - **App ID:** `com.netscope.app`
@@ -48,7 +48,7 @@ docs/               Internal docs (architecture.md, development.md, features.md,
 
 ## Code Conventions
 
-- **Components:** Named function exports in PascalCase files. Props interfaces defined inline at the top of each file. Sub-components may be co-located in the same file (e.g., `DetailPanel.tsx` contains 7 components for the panel and its tabs). Exception: `Toolbar.tsx` uses `forwardRef` to expose the filter input ref.
+- **Components:** Named function exports in PascalCase files. Props interfaces defined inline at the top of each file. Sub-components may be co-located in the same file (e.g., `DetailPanel.tsx` contains 7 components for the panel and its tabs). `Toolbar.tsx` and `FilterInput.tsx` accept a `ref` prop for external focus control.
 - **Types:** HAR spec types prefixed with `Har` (e.g., `HarEntry`, `HarRequest`). App types unprefixed (`FilterState`, `SortState`). Computed/internal fields prefixed with underscore (`_index`, `_url`, `_transferSize`).
 - **Imports:** Use `import type { ... }` for type-only imports. A `@/` path alias is configured but not currently used -- existing code uses relative paths.
 - **Styling:** Plain CSS with BEM-like class names. Theme via CSS custom properties in `:root` and `@media (prefers-color-scheme: dark)`. No CSS modules, CSS-in-JS, or Tailwind. Color variables follow `--color-{category}-{variant}` naming.
@@ -137,7 +137,7 @@ Every file-open code path sets `win.setTitle(fileName)` and `win.setRepresentedF
 
 ### Recent files
 
-The File > Open Recent submenu is managed by an in-memory `recentDocuments` array (capped at 10) since `app.getRecentDocuments()` requires Electron 32+. Each file-open path calls `addRecentDocument()` which updates both the array and the OS-level recent documents (for the dock right-click menu). The app menu is rebuilt after each change. Missing files are detected before creating a window, show a native dialog, and are removed from the list.
+The File > Open Recent submenu is built from `app.getRecentDocuments()` (macOS/Windows). Each file-open path calls `app.addRecentDocument()` which updates the OS-level recent documents list. The app menu is rebuilt after each change. Missing files are filtered out at menu build time and trigger a native dialog when clicked.
 
 ### Error handling
 
@@ -236,7 +236,7 @@ Site favicons in `site/public/` are also derived from the source image. If the i
 
 ## Important Notes
 
-- The app builds for **macOS** (arm64 + x64), **Windows** (x64, NSIS installer), and **Linux** (x64, AppImage + deb).
+- The app builds for **macOS 12+** (arm64 + x64), **Windows 10+** (x64, NSIS installer), and **Linux** (x64, AppImage + deb).
 - Windows builds are unsigned -- users will see SmartScreen warnings on first run.
 - `contextIsolation: true` and `nodeIntegration: false` -- the renderer cannot access Node.js APIs directly.
 - The marketing site is a separate Astro project in `site/`, deployed to Netlify (configured in `netlify.toml` at the repo root).

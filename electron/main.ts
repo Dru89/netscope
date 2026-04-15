@@ -13,19 +13,9 @@ import fs from "fs";
 
 const windows = new Set<BrowserWindow>();
 const windowFilePaths = new Map<BrowserWindow, string>();
-const recentDocuments: string[] = [];
-const MAX_RECENT_DOCUMENTS = 10;
 
 function addRecentDocument(filePath: string) {
   app.addRecentDocument(filePath);
-  const index = recentDocuments.indexOf(filePath);
-  if (index !== -1) {
-    recentDocuments.splice(index, 1);
-  }
-  recentDocuments.unshift(filePath);
-  if (recentDocuments.length > MAX_RECENT_DOCUMENTS) {
-    recentDocuments.length = MAX_RECENT_DOCUMENTS;
-  }
 }
 let pendingFile: string | null = null;
 let pendingUpdateVersion: string | null = null;
@@ -147,11 +137,7 @@ function openFileInNewWindow(filePath: string) {
     } else {
       dialog.showMessageBox(dialogOptions);
     }
-    const index = recentDocuments.indexOf(resolved);
-    if (index !== -1) {
-      recentDocuments.splice(index, 1);
-      buildMenu();
-    }
+    buildMenu();
     return;
   }
 
@@ -385,24 +371,28 @@ function buildMenu() {
         },
         {
           label: "Open Recent",
-          submenu: [
-            ...recentDocuments.map((filePath) => ({
-              label: path.basename(filePath),
-              click: () => openFileInNewWindow(filePath),
-            })),
-            ...(recentDocuments.length > 0
-              ? [{ type: "separator" as const }]
-              : []),
-            {
-              label: "Clear Menu",
-              enabled: recentDocuments.length > 0,
-              click: () => {
-                app.clearRecentDocuments();
-                recentDocuments.length = 0;
-                buildMenu();
+          submenu: (() => {
+            const recentFiles = app
+              .getRecentDocuments()
+              .filter((f) => fs.existsSync(f));
+            return [
+              ...recentFiles.map((filePath) => ({
+                label: path.basename(filePath),
+                click: () => openFileInNewWindow(filePath),
+              })),
+              ...(recentFiles.length > 0
+                ? [{ type: "separator" as const }]
+                : []),
+              {
+                label: "Clear Menu",
+                enabled: recentFiles.length > 0,
+                click: () => {
+                  app.clearRecentDocuments();
+                  buildMenu();
+                },
               },
-            },
-          ],
+            ];
+          })(),
         },
         { type: "separator" },
         ...(isMac ? [{ role: "close" as const }] : [{ role: "quit" as const }]),
