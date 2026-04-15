@@ -137,7 +137,7 @@ Every file-open code path sets `win.setTitle(fileName)` and `win.setRepresentedF
 
 ### Recent files
 
-The File > Open Recent submenu is built from `app.getRecentDocuments()` (macOS/Windows). Each file-open path calls `app.addRecentDocument()` which updates the OS-level recent documents list. The app menu is rebuilt after each change. Missing files are filtered out at menu build time and trigger a native dialog when clicked.
+The File > Open Recent submenu is built from an in-memory `recentDocuments` array (capped at 10). Each file-open path calls `addRecentDocument()` which updates both the array and the OS-level recent documents list (via `app.addRecentDocument()`, for the dock right-click menu). The app menu is rebuilt after each change. Missing files are removed from the array when detected and trigger a native warning dialog.
 
 ### Error handling
 
