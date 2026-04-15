@@ -184,6 +184,10 @@
   flex-shrink: 0;
 }
 
+.toolbar-count-placeholder {
+  visibility: hidden;
+}
+
 .toolbar-search {
   position: relative;
   flex: 1;

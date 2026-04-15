@@ -59,9 +59,16 @@ export function Toolbar({
         {fileName}
       </span>
       <span className="toolbar-count">
-        {hasFilter
-          ? `${filteredEntries} / ${totalEntries} requests`
-          : `${totalEntries} requests`}
+        {hasFilter ? (
+          `${filteredEntries} / ${totalEntries} requests`
+        ) : (
+          <>
+            <span className="toolbar-count-placeholder">
+              {`${totalEntries} / `}
+            </span>
+            {`${totalEntries} requests`}
+          </>
+        )}
       </span>
       <div className="toolbar-search">
         <span className="toolbar-search-icon">

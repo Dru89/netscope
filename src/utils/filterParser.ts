@@ -135,17 +135,38 @@ export function parseSize(value: string): number {
 
 /**
  * Test whether a domain value matches an entry's hostname.
- * Supports wildcard prefix: `*.example.com` matches `sub.example.com`
- * and `example.com`.
+ * Supports glob-style wildcards:
+ *   `*.example.com` matches `sub.example.com` and `example.com`
+ *   `*.foo.*`       matches `api.foo.com` and `foo.org`
+ *   `api.*`         matches `api.example.com`
  */
 export function matchDomain(pattern: string, hostname: string): boolean {
   const p = pattern.toLowerCase();
   const h = hostname.toLowerCase();
-  if (p.startsWith("*.")) {
-    const suffix = p.slice(2); // e.g., "example.com"
-    return h === suffix || h.endsWith("." + suffix);
+
+  if (!p.includes("*")) {
+    return h === p;
   }
-  return h === p;
+
+  // General glob: convert `*` to `.*` for regex matching
+  const regexStr =
+    "^" +
+    p
+      .split("*")
+      .map((seg) => seg.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+      .join(".*") +
+    "$";
+  if (new RegExp(regexStr).test(h)) return true;
+
+  // Special case: `*.suffix` should also match the bare `suffix` itself,
+  // consistent with how Chrome DevTools treats domain wildcards.
+  // e.g. `*.example.com` matches `example.com`, `*.foo.*` matches `foo.com`
+  if (p.startsWith("*.")) {
+    const suffixPattern = p.slice(2);
+    return matchDomain(suffixPattern, h);
+  }
+
+  return false;
 }
 
 /**

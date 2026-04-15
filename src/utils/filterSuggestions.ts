@@ -140,20 +140,24 @@ export function getCursorContext(input: string, cursor: number): CursorContext {
   // because values like domain:"my site.com" contain spaces.
   let tokenStart = 0;
 
+  // Clamp cursor to input length to prevent infinite loops when
+  // the cursor position is past the end of the string.
+  const safeCursor = Math.min(cursor, input.length);
+
   // Scan forward from the start to find which token the cursor is in.
   // This is more reliable than scanning backwards for quote tracking.
   let i = 0;
-  while (i < cursor) {
+  while (i < safeCursor) {
     // Skip whitespace — marks start of next token
     if (input[i] === " ") {
       i++;
-      if (i <= cursor) tokenStart = i;
+      if (i <= safeCursor) tokenStart = i;
       continue;
     }
 
     // Skip past a full token
     const tokenEnd = findTokenEnd(input, i);
-    if (cursor <= tokenEnd) {
+    if (safeCursor <= tokenEnd) {
       // Cursor is inside this token
       tokenStart = i;
       break;
@@ -161,7 +165,7 @@ export function getCursorContext(input: string, cursor: number): CursorContext {
     i = tokenEnd;
   }
 
-  const tokenText = input.slice(tokenStart, cursor);
+  const tokenText = input.slice(tokenStart, safeCursor);
 
   // Check for negation prefix
   let negated = false;
@@ -186,7 +190,7 @@ export function getCursorContext(input: string, cursor: number): CursorContext {
       filterType: key,
       partial: cleanPartial,
       tokenStart,
-      tokenEnd: cursor,
+      tokenEnd: safeCursor,
       negated,
     };
   }
@@ -196,7 +200,7 @@ export function getCursorContext(input: string, cursor: number): CursorContext {
     kind: "key",
     partial: effective,
     tokenStart,
-    tokenEnd: cursor,
+    tokenEnd: safeCursor,
     negated,
   };
 }
@@ -257,8 +261,22 @@ export function getFilterSuggestions(
   const partial = ctx.partial.toLowerCase();
   const values = getValuesForType(ctx.filterType ?? "", data);
 
+  // When the partial contains wildcards, match using glob-style filtering
+  // so the dropdown stays open while typing patterns like `*.foo`
+  const matchValue = partial.includes("*")
+    ? (v: string) => {
+        const regexStr =
+          "^" +
+          partial
+            .split("*")
+            .map((seg) => seg.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+            .join(".*");
+        return new RegExp(regexStr).test(v.toLowerCase());
+      }
+    : (v: string) => v.toLowerCase().startsWith(partial);
+
   return values
-    .filter((v) => v.toLowerCase().startsWith(partial))
+    .filter(matchValue)
     .slice(0, 20) // Cap at 20 suggestions
     .map((v) => {
       const needsQuote = v.includes(" ");
@@ -300,6 +318,11 @@ function getValuesForType(
 /**
  * Apply a suggestion to the input string, returning the new input and
  * where the cursor should be placed.
+ *
+ * Value suggestions (those containing a colon followed by a value) get a
+ * trailing space appended so the user can immediately type the next token.
+ * Key suggestions (e.g. "domain:") don't, because the user still needs
+ * to type the value.
  */
 export function applySuggestion(
   input: string,
@@ -307,8 +330,18 @@ export function applySuggestion(
 ): { newInput: string; newCursor: number } {
   const before = input.slice(0, suggestion.replaceStart);
   const after = input.slice(suggestion.replaceEnd);
-  const newInput = before + suggestion.insertText + after;
-  // Place cursor right after the inserted text
-  const newCursor = before.length + suggestion.insertText.length;
+
+  // Determine if this is a value suggestion (has content after the colon)
+  // vs. a key suggestion (ends with a colon, user still needs to type value)
+  const isValueSuggestion =
+    suggestion.insertText.includes(":") && !suggestion.insertText.endsWith(":");
+
+  // Add trailing space for value suggestions, unless the text after the
+  // replaced region already starts with a space
+  const trailing = isValueSuggestion && !after.startsWith(" ") ? " " : "";
+
+  const newInput = before + suggestion.insertText + trailing + after;
+  const newCursor =
+    before.length + suggestion.insertText.length + trailing.length;
   return { newInput, newCursor };
 }

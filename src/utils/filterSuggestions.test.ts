@@ -263,6 +263,26 @@ describe("getFilterSuggestions", () => {
     const suggestions = getFilterSuggestions("xyz", 3, sampleData);
     expect(suggestions).toEqual([]);
   });
+
+  it("keeps suggestions open when typing * in domain filter", () => {
+    const suggestions = getFilterSuggestions("domain:*", 8, sampleData);
+    expect(suggestions.length).toBeGreaterThan(0);
+    // All domains should match a bare *
+    expect(suggestions.map((s) => s.label)).toEqual([
+      "api.example.com",
+      "cdn.example.com",
+      "example.com",
+    ]);
+  });
+
+  it("filters suggestions with *.example glob pattern", () => {
+    const input = "domain:*.example";
+    const suggestions = getFilterSuggestions(input, input.length, sampleData);
+    expect(suggestions.map((s) => s.label)).toEqual([
+      "api.example.com",
+      "cdn.example.com",
+    ]);
+  });
 });
 
 // ===========================================================================
@@ -292,14 +312,36 @@ describe("applySuggestion", () => {
     expect(result.newCursor).toBe(18);
   });
 
-  it("handles value insertion", () => {
+  it("handles value insertion with trailing space", () => {
     const result = applySuggestion("method:P", {
       label: "POST",
       insertText: "method:POST",
       replaceStart: 0,
       replaceEnd: 8,
     });
-    expect(result.newInput).toBe("method:POST");
+    expect(result.newInput).toBe("method:POST ");
+    expect(result.newCursor).toBe(12);
+  });
+
+  it("does not add trailing space for key suggestions", () => {
+    const result = applySuggestion("dom", {
+      label: "domain:",
+      insertText: "domain:",
+      replaceStart: 0,
+      replaceEnd: 3,
+    });
+    expect(result.newInput).toBe("domain:");
+    expect(result.newCursor).toBe(7);
+  });
+
+  it("does not double trailing space when after text starts with space", () => {
+    const result = applySuggestion("method:P domain:foo", {
+      label: "POST",
+      insertText: "method:POST",
+      replaceStart: 0,
+      replaceEnd: 8,
+    });
+    expect(result.newInput).toBe("method:POST domain:foo");
     expect(result.newCursor).toBe(11);
   });
 });

@@ -234,6 +234,26 @@ describe("matchDomain", () => {
   it("rejects wildcard against unrelated domain", () => {
     expect(matchDomain("*.example.com", "notexample.com")).toBe(false);
   });
+
+  it("matches *.foo.* against subdomains with any TLD", () => {
+    expect(matchDomain("*.foo.*", "api.foo.com")).toBe(true);
+    expect(matchDomain("*.foo.*", "sub.foo.org")).toBe(true);
+    expect(matchDomain("*.foo.*", "deep.sub.foo.net")).toBe(true);
+  });
+
+  it("matches *.foo.* against bare foo with any TLD", () => {
+    expect(matchDomain("*.foo.*", "foo.com")).toBe(true);
+    expect(matchDomain("*.foo.*", "foo.org")).toBe(true);
+  });
+
+  it("matches trailing wildcard api.*", () => {
+    expect(matchDomain("api.*", "api.example.com")).toBe(true);
+    expect(matchDomain("api.*", "api.foo.org")).toBe(true);
+  });
+
+  it("rejects trailing wildcard against non-matching prefix", () => {
+    expect(matchDomain("api.*", "cdn.example.com")).toBe(false);
+  });
 });
 
 // ===========================================================================
