@@ -13,9 +13,9 @@
 
 Netscope is an Electron app with three process layers:
 
-1. **Main process** (`electron/main.ts`) -- Node.js runtime handling window management, file I/O, native menus, file associations (macOS Finder, command-line args on all platforms), theme detection, and auto-updates (`electron-updater`). Manages multiple windows via a `Set<BrowserWindow>` and tracks loaded files in a `Map<BrowserWindow, string>`. Platform-specific behavior (title bar style, app menu, quit-on-close) is guarded by an `isMac` constant.
+1. **Main process** (`electron/main.ts`) -- Node.js runtime handling window management, file I/O, native menus, file associations (macOS Finder, command-line args on all platforms), theme detection, auto-updates (`electron-updater`), and single-instance enforcement (`requestSingleInstanceLock`). Manages multiple windows via a `Set<BrowserWindow>` and tracks loaded files in a `Map<BrowserWindow, string>`. Platform-specific behavior (title bar style, app menu, quit-on-close) is guarded by an `isMac` constant. On Windows/Linux, file opens from the OS go through the `second-instance` event; on macOS they use the `open-file` event.
 
-2. **Preload script** (`electron/preload.ts`) -- Bridge layer using `contextBridge.exposeInMainWorld` to expose a typed `window.electronAPI` with 6 methods. This is the only communication channel between main and renderer.
+2. **Preload script** (`electron/preload.ts`) -- Bridge layer using `contextBridge.exposeInMainWorld` to expose a typed `window.electronAPI` with 7 methods. This is the only communication channel between main and renderer.
 
 3. **Renderer** (`src/`) -- A React 18 SPA bundled by Vite. No direct Node.js access. All file I/O goes through IPC. State is managed entirely with React hooks in `App.tsx` (no external state library). Falls back to browser `FileReader` when `window.electronAPI` is unavailable (dev mode).
 
@@ -53,7 +53,7 @@ docs/               Internal docs (architecture.md, development.md, features.md,
 - **Imports:** Use `import type { ... }` for type-only imports. A `@/` path alias is configured but not currently used -- existing code uses relative paths.
 - **Styling:** Plain CSS with BEM-like class names. Theme via CSS custom properties in `:root` and `@media (prefers-color-scheme: dark)`. No CSS modules, CSS-in-JS, or Tailwind. Color variables follow `--color-{category}-{variant}` naming.
 - **State management:** All state in `App.tsx` via `useState`/`useCallback`/`useMemo`, passed down as props. Theme preference persisted to `localStorage` key `themeMode`.
-- **IPC pattern:** `ipcMain.handle` for renderer-to-main requests; `webContents.send` + `ipcRenderer.on` for main-to-renderer pushes. All listeners return unsubscribe functions for React `useEffect` cleanup.
+- **IPC pattern:** `ipcMain.handle` for renderer-to-main requests; `webContents.send` + `ipcRenderer.on` for main-to-renderer pushes; `ipcRenderer.send` for fire-and-forget signals (e.g., `renderer-ready`). All listeners return unsubscribe functions for React `useEffect` cleanup.
 - **No default exports** except `App.tsx`.
 
 ## Key Commands

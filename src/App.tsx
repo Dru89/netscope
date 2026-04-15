@@ -72,6 +72,8 @@ function App() {
     if (!window.electronAPI) return;
     const cleanup = window.electronAPI.onHarFileOpened((data) => {
       loadHarContent(data.content, data.fileName);
+      // Tell the main process the content is loaded so it can show the window
+      window.electronAPI.signalReady();
     });
     return cleanup;
   }, [loadHarContent]);

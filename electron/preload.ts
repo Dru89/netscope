@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-native-theme"),
   setThemeMode: (mode: "system" | "light" | "dark"): Promise<void> =>
     ipcRenderer.invoke("set-theme-mode", mode),
+  signalReady: (): void => {
+    ipcRenderer.send("renderer-ready");
+  },
   onHarFileOpened: (callback: (data: HarFileData) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: HarFileData) =>
       callback(data);

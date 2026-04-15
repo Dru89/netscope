@@ -136,10 +136,30 @@ function createWindow(fileToOpen?: string): BrowserWindow {
   lastCreatedWindow = win;
 
   win.once("ready-to-show", () => {
-    win.show();
-    // If a file was specified for this window, send it now
     if (fileToOpen) {
+      // When opening a file, defer showing the window until the renderer
+      // signals that the HAR content is parsed and rendered. This avoids
+      // a flash of the welcome screen. A timeout ensures the window still
+      // appears even if the renderer is slow (e.g., very large files).
+      const SHOW_TIMEOUT_MS = 800;
+      let shown = false;
+      const show = () => {
+        if (shown) return;
+        shown = true;
+        ipcMain.removeListener("renderer-ready", onReady);
+        win.show();
+      };
+      const onReady = (event: Electron.IpcMainEvent) => {
+        if (event.sender === win.webContents) {
+          clearTimeout(timeout);
+          show();
+        }
+      };
+      const timeout = setTimeout(show, SHOW_TIMEOUT_MS);
+      ipcMain.on("renderer-ready", onReady);
       sendFileToWindow(win, fileToOpen);
+    } else {
+      win.show();
     }
   });
 
@@ -246,7 +266,7 @@ function openFileInNewWindow(filePath: string) {
 ipcMain.handle("open-file-dialog", async (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   const result = await dialog.showOpenDialog(win!, {
-    properties: ["openFile"],
+    properties: ["openFile", "multiSelections"],
     filters: [
       { name: "HAR Files", extensions: ["har"] },
       { name: "All Files", extensions: ["*"] },
@@ -254,9 +274,13 @@ ipcMain.handle("open-file-dialog", async (event) => {
   });
 
   if (!result.canceled && result.filePaths.length > 0) {
-    const filePath = result.filePaths[0];
+    // First file loads in the calling window; additional files open new windows
+    const [firstPath, ...restPaths] = result.filePaths;
+    for (const extra of restPaths) {
+      openFileInNewWindow(extra);
+    }
     try {
-      const resolved = path.resolve(filePath);
+      const resolved = path.resolve(firstPath);
       const fileName = path.basename(resolved);
       const content = fs.readFileSync(resolved, "utf-8");
       if (win) {
@@ -473,23 +497,29 @@ function buildMenu() {
           click: async () => {
             const focusedWindow = BrowserWindow.getFocusedWindow();
             const result = await dialog.showOpenDialog(focusedWindow!, {
-              properties: ["openFile"],
+              properties: ["openFile", "multiSelections"],
               filters: [
                 { name: "HAR Files", extensions: ["har"] },
                 { name: "All Files", extensions: ["*"] },
               ],
             });
             if (!result.canceled && result.filePaths.length > 0) {
-              const filePath = result.filePaths[0];
-              const existing = findWindowForFile(filePath);
-              if (existing) {
-                existing.focus();
-              } else if (focusedWindow && !windowFilePaths.has(focusedWindow)) {
-                // Window is on the welcome screen — load in place
-                sendFileToWindow(focusedWindow, filePath);
-              } else {
-                // Window already has a file, or no focused window — open in new window
-                openFileInNewWindow(filePath);
+              let usedFocusedWindow = false;
+              for (const filePath of result.filePaths) {
+                const existing = findWindowForFile(filePath);
+                if (existing) {
+                  existing.focus();
+                } else if (
+                  !usedFocusedWindow &&
+                  focusedWindow &&
+                  !windowFilePaths.has(focusedWindow)
+                ) {
+                  // First file loads into the welcome screen window
+                  sendFileToWindow(focusedWindow, filePath);
+                  usedFocusedWindow = true;
+                } else {
+                  openFileInNewWindow(filePath);
+                }
               }
             }
           },
