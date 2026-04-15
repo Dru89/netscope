@@ -58,6 +58,18 @@ function getSkippedVersion(): string | null {
 function setSkippedVersion(version: string) {
   const prefs = readPrefs();
   prefs.skippedUpdateVersion = version;
+  // Clear any remind-later date when skipping — they're mutually exclusive
+  delete prefs.remindLaterDate;
+  writePrefs(prefs);
+}
+
+function getRemindLaterDate(): string | null {
+  return (readPrefs().remindLaterDate as string) ?? null;
+}
+
+function setRemindLaterDate(date: string) {
+  const prefs = readPrefs();
+  prefs.remindLaterDate = date;
   writePrefs(prefs);
 }
 
@@ -353,8 +365,21 @@ nativeTheme.on("updated", () => {
   });
 });
 
+// Show download progress on the dock/taskbar
+autoUpdater.on("download-progress", (progress) => {
+  const fraction = progress.percent / 100;
+  windows.forEach((win) => {
+    win.setProgressBar(fraction);
+  });
+});
+
 // Track when an update has been downloaded
 autoUpdater.on("update-downloaded", (info) => {
+  // Clear progress bars
+  windows.forEach((win) => {
+    win.setProgressBar(-1);
+  });
+
   pendingUpdateVersion = info.version;
   updateAboutPanel();
 
@@ -376,10 +401,39 @@ autoUpdater.on("update-downloaded", (info) => {
   });
 });
 
+// Handle update download errors
+autoUpdater.on("error", (err) => {
+  console.error("Auto-update error:", err);
+  // Clear progress bars
+  windows.forEach((win) => {
+    win.setProgressBar(-1);
+  });
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  const dialogOptions = {
+    type: "error" as const,
+    message: "Update Failed",
+    detail: `An error occurred while updating: ${err.message}. You can download the latest version manually from the Netscope website.`,
+    buttons: ["OK"],
+  };
+  if (focusedWindow) {
+    dialog.showMessageBox(focusedWindow, dialogOptions);
+  } else {
+    dialog.showMessageBox(dialogOptions);
+  }
+});
+
 // Prompt the user when an update is available (before downloading)
 autoUpdater.on("update-available", (info) => {
   const skippedVersion = getSkippedVersion();
   if (skippedVersion === info.version) return;
+
+  // Check if the user chose "Remind Me Later" for this version within
+  // the current calendar day — don't re-prompt until tomorrow
+  const remindLaterDate = getRemindLaterDate();
+  if (remindLaterDate) {
+    const today = new Date().toISOString().slice(0, 10);
+    if (remindLaterDate === today) return;
+  }
 
   const focusedWindow = BrowserWindow.getFocusedWindow();
   const dialogOptions = {
@@ -395,6 +449,8 @@ autoUpdater.on("update-available", (info) => {
   showDialog.then((result) => {
     if (result.response === 0) {
       autoUpdater.downloadUpdate();
+    } else if (result.response === 1) {
+      setRemindLaterDate(new Date().toISOString().slice(0, 10));
     } else if (result.response === 2) {
       setSkippedVersion(info.version);
     }

@@ -55,7 +55,7 @@
   --color-accent-hover: #1565c0;
 
   /* Sizing */
-  --titlebar-height: 52px;
+  --titlebar-height: 0px;
   --toolbar-height: 40px;
   --summary-height: 32px;
   --font-mono: "SF Mono", "Menlo", "Monaco", "Consolas", monospace;
@@ -65,6 +65,14 @@
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
+}
+
+/* macOS uses a hidden inset title bar with traffic lights, so the
+   content area needs top padding to avoid overlapping them. On
+   Windows and Linux the system title bar handles this. The platform
+   is set as a data attribute on <html> from the preload script. */
+:root[data-platform="darwin"] {
+  --titlebar-height: 52px;
 }
 
 /* Dark theme */

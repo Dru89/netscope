@@ -6,6 +6,10 @@ export interface HarFileData {
   fileName: string;
 }
 
+// Expose the platform to CSS so styles can adapt to the OS
+// (e.g., titlebar padding is only needed on macOS)
+document.documentElement.dataset.platform = process.platform;
+
 contextBridge.exposeInMainWorld("electronAPI", {
   openFileDialog: (): Promise<HarFileData | null> =>
     ipcRenderer.invoke("open-file-dialog"),
