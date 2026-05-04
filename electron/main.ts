@@ -82,6 +82,26 @@ function setRemindLaterDate(date: string) {
   writePrefs(prefs);
 }
 
+function saveRestoreState() {
+  const filePaths = [...windowFilePaths.values()];
+  if (filePaths.length === 0) return;
+  const prefs = readPrefs();
+  prefs.restoreAfterUpdate = filePaths;
+  writePrefs(prefs);
+}
+
+function getRestoreState(): string[] | null {
+  const prefs = readPrefs();
+  const paths = prefs.restoreAfterUpdate as string[] | undefined;
+  return paths && paths.length > 0 ? paths : null;
+}
+
+function clearRestoreState() {
+  const prefs = readPrefs();
+  delete prefs.restoreAfterUpdate;
+  writePrefs(prefs);
+}
+
 const isMac = process.platform === "darwin";
 const CASCADE_OFFSET = 28;
 let lastCreatedWindow: BrowserWindow | null = null;
@@ -538,6 +558,7 @@ autoUpdater.on("update-downloaded", (info) => {
     : dialog.showMessageBox(dialogOptions);
   showDialog.then((result) => {
     if (result.response === 0) {
+      saveRestoreState();
       autoUpdater.quitAndInstall();
     }
   });
@@ -653,6 +674,7 @@ async function showAbout() {
 
   // "Restart Now" is index 0 when an update is pending
   if (pendingUpdateVersion && result.response === 0) {
+    saveRestoreState();
     autoUpdater.quitAndInstall();
   }
 }
@@ -828,9 +850,31 @@ app.whenReady().then(() => {
     pendingFile = path.resolve(harFile);
   }
 
-  // Create the initial window, passing the pending file if any
-  createWindow(pendingFile || undefined);
-  pendingFile = null;
+  // Restore files that were open before an update-triggered restart.
+  // If no file was passed via args/Finder, use the first restore path
+  // for the initial window to avoid an empty welcome screen.
+  const restorePaths = getRestoreState();
+  if (restorePaths) {
+    clearRestoreState();
+    let pathsToOpen = restorePaths.filter((p) => fs.existsSync(p));
+    if (!pendingFile && pathsToOpen.length > 0) {
+      pendingFile = pathsToOpen[0];
+      pathsToOpen = pathsToOpen.slice(1);
+    }
+
+    // Create the initial window, passing the pending file if any
+    createWindow(pendingFile || undefined);
+    pendingFile = null;
+
+    // Open remaining restored files in new windows
+    for (const filePath of pathsToOpen) {
+      openFileInNewWindow(filePath);
+    }
+  } else {
+    // Create the initial window, passing the pending file if any
+    createWindow(pendingFile || undefined);
+    pendingFile = null;
+  }
 
   // Check for updates — prompt the user before downloading
   autoUpdater.autoDownload = false;
