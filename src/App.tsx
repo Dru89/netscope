@@ -21,6 +21,7 @@ import { RequestTable } from "./components/RequestTable";
 import { DetailPanel } from "./components/DetailPanel";
 import { SummaryBar } from "./components/SummaryBar";
 import { WelcomeScreen } from "./components/WelcomeScreen";
+import * as platform from "./platform";
 import "./styles/app.css";
 
 export type ThemeMode = "system" | "light" | "dark";
@@ -48,9 +49,7 @@ function App() {
   // Apply theme mode on mount and when it changes
   useEffect(() => {
     localStorage.setItem("themeMode", themeMode);
-    if (window.electronAPI) {
-      window.electronAPI.setThemeMode(themeMode);
-    }
+    void platform.setThemeMode(themeMode);
   }, [themeMode]);
 
   const loadHarContent = useCallback((content: string, name: string) => {
@@ -74,21 +73,18 @@ function App() {
     }
   }, []);
 
-  // Listen for files opened from Electron (Finder double-click, menu open, etc.)
+  // Listen for files opened via OS (double-click, file associations, CLI arg)
   useEffect(() => {
-    if (!window.electronAPI) return;
-    const cleanup = window.electronAPI.onHarFileOpened((data) => {
+    const cleanup = platform.onHarFileOpened((data) => {
       loadHarContent(data.content, data.fileName);
-      // Tell the main process the content is loaded so it can show the window
-      window.electronAPI.signalReady();
+      platform.signalReady();
     });
     return cleanup;
   }, [loadHarContent]);
 
   // Handle file open dialog
   const handleOpenFile = useCallback(async () => {
-    if (!window.electronAPI) return;
-    const result = await window.electronAPI.openFileDialog();
+    const result = await platform.openFileDialog();
     if (result) {
       loadHarContent(result.content, result.fileName);
     }
@@ -96,32 +92,20 @@ function App() {
 
   // Handle drag and drop
   const handleDrop = useCallback(
-    async (e: React.DragEvent) => {
+    (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
 
       const files = e.dataTransfer.files;
       if (files.length > 0) {
         const file = files[0];
-        if (window.electronAPI) {
-          // In Electron, read file via main process using the path
-          const filePath = window.electronAPI.getPathForFile(file);
-          if (filePath) {
-            const result = await window.electronAPI.readHarFile(filePath);
-            if (result) {
-              loadHarContent(result.content, result.fileName);
-            }
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            loadHarContent(event.target.result as string, file.name);
           }
-        } else {
-          // Fallback: read file directly via FileReader (for dev in browser)
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            if (event.target?.result) {
-              loadHarContent(event.target.result as string, file.name);
-            }
-          };
-          reader.readAsText(file);
-        }
+        };
+        reader.readAsText(file);
       }
     },
     [loadHarContent],
@@ -163,8 +147,7 @@ function App() {
 
   // Listen for sort changes from the context menu
   useEffect(() => {
-    if (!window.electronAPI) return;
-    const cleanup = window.electronAPI.onContextMenuSort((newSort) => {
+    const cleanup = platform.onContextMenuSort((newSort) => {
       setSort({
         field: newSort.field as SortField,
         direction: newSort.direction as SortDirection,
@@ -224,11 +207,18 @@ function App() {
         filterInputRef.current?.focus();
         return;
       }
+
+      // Cmd/Ctrl+O — open file dialog
+      if ((e.metaKey || e.ctrlKey) && e.key === "o") {
+        e.preventDefault();
+        void handleOpenFile();
+        return;
+      }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [detailPanelOpen]);
+  }, [detailPanelOpen, handleOpenFile]);
 
   // Parse the search string into structured filter tokens
   const filterTokens = useMemo(
@@ -290,8 +280,7 @@ function App() {
   // Right-click context menu on request rows
   const handleContextMenu = useCallback(
     (entry: HarEntry) => {
-      if (!window.electronAPI) return;
-      window.electronAPI.showRequestContextMenu({
+      platform.showRequestContextMenu({
         entry,
         allEntries: filteredEntries,
         sortField: sort.field,

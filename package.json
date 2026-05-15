@@ -24,6 +24,9 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.11.0",
+    "@tauri-apps/plugin-dialog": "^2.7.1",
+    "@tauri-apps/plugin-fs": "^2.5.1",
     "electron-updater": "^6.8.3",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
@@ -47,7 +50,7 @@
     "vitest": "^4.1.4"
   },
   "build": {
-    "appId": "com.netscope.app",
+    "appId": "dev.unremarkable.netscope",
     "productName": "Netscope",
     "afterPack": "scripts/afterPack.js",
     "afterSign": "scripts/notarize.js",
