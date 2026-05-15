@@ -50,6 +50,11 @@ jobs:
 
       - run: npm ci
 
+      # pacman target requires bsdtar to build the .MTREE manifest
+      - name: Install Linux build dependencies
+        if: matrix.platform == 'linux'
+        run: sudo apt-get install -y libarchive-tools
+
       # Build without publishing (--publish never). Each platform
       # produces its artifacts in release/.
       #
@@ -101,6 +106,7 @@ jobs:
             release/*.exe
             release/*.AppImage
             release/*.deb
+            release/*.pacman
             release/*.yml
             release/*.yaml
           if-no-files-found: error

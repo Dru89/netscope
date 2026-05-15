@@ -106,8 +106,7 @@ jobs:
             release/*.exe
             release/*.AppImage
             release/*.deb
-            release/*.tar.zst
-            release/*.tar.xz
+            release/*.pacman
             release/*.yml
             release/*.yaml
           if-no-files-found: error
