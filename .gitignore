@@ -7,3 +7,4 @@ release/
 release.zip
 .env
 test-results/
+.claude/
