@@ -876,10 +876,15 @@ app.whenReady().then(() => {
     pendingFile = null;
   }
 
-  // Check for updates — prompt the user before downloading
+  // Check for updates — prompt the user before downloading.
+  // __BUILD_CHANNEL__ is injected at build time by vite.config.ts. Nightly
+  // builds set it to "nightly", which makes electron-updater check the
+  // nightly-*.yml manifests and accept GitHub pre-release builds.
+  autoUpdater.channel = __BUILD_CHANNEL__;
+  autoUpdater.allowPrerelease = __BUILD_CHANNEL__ !== "latest";
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
-  autoUpdater.logger = null; // Suppress verbose logging
+  autoUpdater.logger = null;
   autoUpdater.checkForUpdates();
 });
 

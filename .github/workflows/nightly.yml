@@ -1,0 +1,138 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: "0 2 * * *" # 2am UTC daily
+  workflow_dispatch: # manual trigger for testing
+  push:
+    branches: [nightly] # trigger on pushes during active development
+
+# Cancel superseded nightly builds — a newer push makes the in-flight one stale.
+concurrency:
+  group: nightly
+  cancel-in-progress: true
+
+jobs:
+  # Compute the nightly version string once so all jobs agree, even if
+  # the workflow straddles midnight UTC.
+  compute-version:
+    runs-on: ubuntu-latest
+    outputs:
+      nightly_version: ${{ steps.version.outputs.nightly_version }}
+      tag_name: ${{ steps.version.outputs.tag_name }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Compute version
+        id: version
+        run: |
+          BASE=$(node -p "require('./package.json').version.split('-')[0]")
+          DATE=$(date -u +%Y%m%d)
+          echo "nightly_version=${BASE}-nightly.${DATE}" >> $GITHUB_OUTPUT
+          echo "tag_name=v${BASE}-nightly.${DATE}" >> $GITHUB_OUTPUT
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  build:
+    needs: [compute-version, test]
+    strategy:
+      # Keep going if one platform fails — partial nightly artifacts are still useful.
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+          - os: windows-latest
+            platform: win
+          - os: ubuntu-latest
+            platform: linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # Stamp the version into package.json without committing — the built
+      # artifacts will report the nightly version string.
+      - name: Set nightly version
+        shell: bash
+        run: npm version ${{ needs.compute-version.outputs.nightly_version }} --no-git-tag-version
+
+      - name: Build (macOS)
+        if: matrix.platform == 'mac'
+        env:
+          BUILD_CHANNEL: nightly
+          CSC_LINK: ${{ secrets.MAC_CERTIFICATE_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npx tsc && npx vite build && npx electron-builder --mac --publish never --config electron-builder.nightly.js
+
+      - name: Build (Windows/Linux)
+        if: matrix.platform != 'mac'
+        env:
+          BUILD_CHANNEL: nightly
+        run: npx tsc && npx vite build && npx electron-builder --${{ matrix.platform }} --publish never --config electron-builder.nightly.js
+
+      # Upload distributable artifacts only — skip unpacked app directories.
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-${{ matrix.platform }}
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.AppImage
+            release/*.deb
+            release/*.yml
+            release/*.yaml
+          if-no-files-found: error
+          retention-days: 3
+
+  publish:
+    needs: [compute-version, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: release
+          merge-multiple: true
+
+      - name: List release artifacts
+        run: ls -la release/
+
+      - name: Create or update nightly GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.compute-version.outputs.tag_name }}
+          name: "Nightly — ${{ needs.compute-version.outputs.nightly_version }}"
+          prerelease: true
+          files: release/*
+          body: |
+            Automated nightly build — ${{ needs.compute-version.outputs.nightly_version }}
+
+            This is a pre-release build intended for testing. It may be unstable.
+            Stable users on the main release channel will not receive this update automatically.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

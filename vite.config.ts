@@ -4,6 +4,9 @@ import electron from "vite-plugin-electron";
 import electronRenderer from "vite-plugin-electron-renderer";
 
 export default defineConfig({
+  define: {
+    __BUILD_CHANNEL__: JSON.stringify(process.env.BUILD_CHANNEL ?? "latest"),
+  },
   plugins: [
     react(),
     electron([
