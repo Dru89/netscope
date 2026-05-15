@@ -1,6 +1,6 @@
 {
   "name": "netscope",
-  "version": "3.3.0",
+  "version": "4.0.0",
   "description": "A desktop app for viewing and exploring HAR files",
   "author": "Drew Hays <drew@hays.fm>",
   "license": "MIT",
@@ -31,6 +31,7 @@
   "devDependencies": {
     "@electron/notarize": "^3.1.1",
     "@playwright/test": "^1.59.1",
+    "@tauri-apps/cli": "^2.11.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.7.0",

@@ -8,3 +8,4 @@ release.zip
 .env
 test-results/
 .claude/
+src-tauri/target/
