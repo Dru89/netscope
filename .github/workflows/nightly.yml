@@ -67,6 +67,11 @@ jobs:
 
       - run: npm ci
 
+      # pacman target requires bsdtar to build the .MTREE manifest
+      - name: Install Linux build dependencies
+        if: matrix.platform == 'linux'
+        run: sudo apt-get install -y libarchive-tools
+
       # Stamp the version into package.json without committing — the built
       # artifacts will report the nightly version string.
       - name: Set nightly version
@@ -101,6 +106,7 @@ jobs:
             release/*.exe
             release/*.AppImage
             release/*.deb
+            release/*.pacman
             release/*.yml
             release/*.yaml
           if-no-files-found: error

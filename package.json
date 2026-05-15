@@ -116,7 +116,8 @@
       "icon": "build/icon.png",
       "target": [
         "AppImage",
-        "deb"
+        "deb",
+        "pacman"
       ],
       "category": "Development",
       "mimeTypes": [
