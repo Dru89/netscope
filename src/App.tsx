@@ -82,6 +82,13 @@ function App() {
     return cleanup;
   }, [loadHarContent]);
 
+  // Load file passed as CLI argument on startup (Linux/Windows file associations)
+  useEffect(() => {
+    void platform.getStartupFile().then((data) => {
+      if (data) loadHarContent(data.content, data.fileName);
+    });
+  }, [loadHarContent]);
+
   // Handle file open dialog
   const handleOpenFile = useCallback(async () => {
     const result = await platform.openFileDialog();
@@ -89,6 +96,11 @@ function App() {
       loadHarContent(result.content, result.fileName);
     }
   }, [loadHarContent]);
+
+  // Listen for File > Open from the native menu
+  useEffect(() => {
+    return platform.onRequestOpenFile(() => void handleOpenFile());
+  }, [handleOpenFile]);
 
   // Handle drag and drop
   const handleDrop = useCallback(

@@ -2,6 +2,7 @@ import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 
 export type HarFileData = {
   filePath: string;
@@ -69,6 +70,20 @@ export function onHarFileOpened(
   listen<HarFileData>("har-file-opened", (event) => {
     callback(event.payload);
   }).then((fn) => {
+    unlisten = fn;
+  });
+  return () => unlisten?.();
+}
+
+export async function getStartupFile(): Promise<HarFileData | null> {
+  if (isElectron()) return null;
+  return invoke<HarFileData | null>("get_startup_file");
+}
+
+export function onRequestOpenFile(callback: () => void): () => void {
+  if (isElectron()) return () => {};
+  let unlisten: (() => void) | undefined;
+  listen<null>("request-open-file", () => callback()).then((fn) => {
     unlisten = fn;
   });
   return () => unlisten?.();
