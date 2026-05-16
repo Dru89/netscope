@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
-use tauri::{Emitter, Manager};
+use tauri::{Emitter, EventTarget, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 #[derive(serde::Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -10,27 +12,218 @@ struct HarFileData {
     file_name: String,
 }
 
-struct StartupState {
-    file: Mutex<Option<HarFileData>>,
+const CASCADE_OFFSET: f64 = 28.0;
+
+struct AppState {
+    // window label → resolved path of the file currently shown (for dedup)
+    open_files: Mutex<HashMap<String, PathBuf>>,
+    // files waiting to be fetched by the frontend on mount
+    pending_files: Mutex<HashMap<String, HarFileData>>,
+    // counter for generating unique labels beyond the initial "main" window
+    window_counter: Mutex<u32>,
+    // number of live windows (for quit-on-last-close on Linux/Windows)
+    active_windows: Mutex<u32>,
+    // label of the most-recently created window, used for cascade positioning
+    last_created_label: Mutex<Option<String>>,
+    // label of the most-recently focused window, used for routing "open" events
+    last_focused_label: Mutex<Option<String>>,
 }
 
-#[tauri::command]
-fn get_startup_file(state: tauri::State<'_, StartupState>) -> Option<HarFileData> {
-    state.file.lock().unwrap().take()
+impl AppState {
+    fn new(initial_count: u32) -> Self {
+        Self {
+            open_files: Mutex::new(HashMap::new()),
+            pending_files: Mutex::new(HashMap::new()),
+            window_counter: Mutex::new(0),
+            active_windows: Mutex::new(initial_count),
+            last_created_label: Mutex::new(Some("main".to_string())),
+            last_focused_label: Mutex::new(Some("main".to_string())),
+        }
+    }
+
+    fn next_label(&self) -> String {
+        let mut n = self.window_counter.lock().unwrap();
+        *n += 1;
+        format!("window-{}", n)
+    }
+
+    fn find_window_for_file(&self, path: &PathBuf) -> Option<String> {
+        self.open_files
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|(_, p)| *p == path)
+            .map(|(label, _)| label.clone())
+    }
 }
 
 fn read_har_file(path: &str) -> Option<HarFileData> {
-    let content = std::fs::read_to_string(path).ok()?;
-    let file_name = std::path::Path::new(path)
+    let resolved = std::fs::canonicalize(path).ok()?;
+    let content = std::fs::read_to_string(&resolved).ok()?;
+    let file_name = resolved
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or(path)
         .to_string();
     Some(HarFileData {
-        file_path: path.to_string(),
+        file_path: resolved.to_string_lossy().to_string(),
         content,
         file_name,
     })
+}
+
+// Returns the position (in logical pixels) for the next cascaded window.
+// Mirrors Electron's: lastCreatedWindow ?? getFocusedWindow(), offset by 28px.
+fn cascade_position(app: &tauri::AppHandle) -> Option<(f64, f64)> {
+    let state = app.state::<AppState>();
+    let reference_label = state.last_created_label.lock().unwrap().clone();
+
+    let reference = reference_label
+        .and_then(|label| app.get_webview_window(&label))
+        .or_else(|| {
+            app.webview_windows()
+                .into_values()
+                .find(|w| w.is_focused().unwrap_or(false))
+        })?;
+
+    let scale = reference.scale_factor().ok()?;
+    let phys = reference.outer_position().ok()?;
+    Some((
+        phys.x as f64 / scale + CASCADE_OFFSET,
+        phys.y as f64 / scale + CASCADE_OFFSET,
+    ))
+}
+
+fn attach_window_handler(app: &tauri::AppHandle, label: &str) {
+    if let Some(window) = app.get_webview_window(label) {
+        let app_handle = app.clone();
+        let label = label.to_string();
+        window.on_window_event(move |event| {
+            match event {
+                WindowEvent::Focused(true) => {
+                    *app_handle.state::<AppState>().last_focused_label.lock().unwrap() =
+                        Some(label.clone());
+                }
+                WindowEvent::Destroyed => {
+                    let state = app_handle.state::<AppState>();
+                    state.open_files.lock().unwrap().remove(&label);
+                    state.pending_files.lock().unwrap().remove(&label);
+                    {
+                        let mut last = state.last_created_label.lock().unwrap();
+                        if last.as_deref() == Some(&label) {
+                            *last = None;
+                        }
+                    }
+                    {
+                        let mut last = state.last_focused_label.lock().unwrap();
+                        if last.as_deref() == Some(&label) {
+                            *last = None;
+                        }
+                    }
+                    let remaining = {
+                        let mut count = state.active_windows.lock().unwrap();
+                        *count = count.saturating_sub(1);
+                        *count
+                    };
+                    #[cfg(not(target_os = "macos"))]
+                    if remaining == 0 {
+                        app_handle.exit(0);
+                    }
+                }
+                _ => {}
+            }
+        });
+    }
+}
+
+fn create_window(app: &tauri::AppHandle, file: Option<HarFileData>) -> tauri::Result<()> {
+    let state = app.state::<AppState>();
+    let label = state.next_label();
+
+    if let Some(ref data) = file {
+        state
+            .pending_files
+            .lock()
+            .unwrap()
+            .insert(label.clone(), data.clone());
+        if let Ok(resolved) = std::fs::canonicalize(&data.file_path) {
+            state
+                .open_files
+                .lock()
+                .unwrap()
+                .insert(label.clone(), resolved);
+        }
+    }
+
+    *state.active_windows.lock().unwrap() += 1;
+
+    let mut builder = WebviewWindowBuilder::new(app, &label, WebviewUrl::App("index.html".into()))
+        .title("Netscope")
+        .inner_size(1400.0, 900.0)
+        .min_inner_size(900.0, 600.0);
+
+    if let Some((x, y)) = cascade_position(app) {
+        builder = builder.position(x, y);
+    }
+
+    builder.build()?;
+
+    *state.last_created_label.lock().unwrap() = Some(label.clone());
+    attach_window_handler(app, &label);
+
+    Ok(())
+}
+
+// Called by each window's frontend on mount to get any pre-assigned file.
+#[tauri::command]
+fn get_window_file(window: tauri::WebviewWindow) -> Option<HarFileData> {
+    window
+        .app_handle()
+        .state::<AppState>()
+        .pending_files
+        .lock()
+        .unwrap()
+        .remove(window.label())
+}
+
+// Called by the frontend after loading a file into the current window, so
+// Rust can track it for dedup when another window tries to open the same file.
+#[tauri::command]
+fn register_open_file(window: tauri::WebviewWindow, file_path: String) {
+    if let Ok(resolved) = std::fs::canonicalize(&file_path) {
+        window
+            .app_handle()
+            .state::<AppState>()
+            .open_files
+            .lock()
+            .unwrap()
+            .insert(window.label().to_string(), resolved);
+    }
+}
+
+// Open a file that the frontend has already read. Focuses the existing window
+// if the file is already open; otherwise creates a new window for it.
+#[tauri::command]
+fn open_file_in_new_window(
+    app: tauri::AppHandle,
+    file_path: String,
+    content: String,
+    file_name: String,
+) -> tauri::Result<()> {
+    let state = app.state::<AppState>();
+    if let Ok(resolved) = std::fs::canonicalize(&file_path) {
+        if let Some(label) = state.find_window_for_file(&resolved) {
+            if let Some(window) = app.get_webview_window(&label) {
+                return window.set_focus().map_err(Into::into);
+            }
+        }
+    }
+    create_window(&app, Some(HarFileData { file_path, content, file_name }))
+}
+
+#[tauri::command]
+fn new_window(app: tauri::AppHandle) -> tauri::Result<()> {
+    create_window(&app, None)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -42,12 +235,38 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![get_startup_file])
+        .invoke_handler(tauri::generate_handler![
+            get_window_file,
+            register_open_file,
+            open_file_in_new_window,
+            new_window,
+        ])
         .setup(move |app| {
-            app.manage(StartupState {
-                file: Mutex::new(startup_file),
-            });
+            // The initial "main" window is created by Tauri from tauri.conf.json.
+            // We just need to wire up its state and close handler.
+            let state = AppState::new(1);
 
+            if let Some(ref data) = startup_file {
+                state
+                    .pending_files
+                    .lock()
+                    .unwrap()
+                    .insert("main".to_string(), data.clone());
+                if let Ok(resolved) = std::fs::canonicalize(&data.file_path) {
+                    state
+                        .open_files
+                        .lock()
+                        .unwrap()
+                        .insert("main".to_string(), resolved);
+                }
+            }
+
+            app.manage(state);
+            attach_window_handler(app.handle(), "main");
+
+            // Build menu
+            let new_window_item =
+                MenuItem::with_id(app, "new_window", "New Window", true, Some("CmdOrCtrl+N"))?;
             let open_item =
                 MenuItem::with_id(app, "open", "Open...", true, Some("CmdOrCtrl+O"))?;
 
@@ -69,12 +288,29 @@ pub fn run() {
                         &PredefinedMenuItem::quit(app, None)?,
                     ],
                 )?;
-                let file_menu = Submenu::with_items(app, "File", true, &[&open_item])?;
+                let file_menu = Submenu::with_items(
+                    app,
+                    "File",
+                    true,
+                    &[
+                        &new_window_item,
+                        &open_item,
+                        &PredefinedMenuItem::separator(app)?,
+                        &PredefinedMenuItem::close_window(app, None)?,
+                    ],
+                )?;
                 Menu::with_items(app, &[&app_menu, &file_menu])?
             };
 
             #[cfg(not(target_os = "macos"))]
             let menu = {
+                let close_item = MenuItem::with_id(
+                    app,
+                    "close_window",
+                    "Close Window",
+                    true,
+                    Some("CmdOrCtrl+W"),
+                )?;
                 let quit_item =
                     MenuItem::with_id(app, "quit", "Quit", true, Some("CmdOrCtrl+Q"))?;
                 let file_menu = Submenu::with_items(
@@ -82,7 +318,10 @@ pub fn run() {
                     "File",
                     true,
                     &[
+                        &new_window_item,
                         &open_item,
+                        &PredefinedMenuItem::separator(app)?,
+                        &close_item,
                         &PredefinedMenuItem::separator(app)?,
                         &quit_item,
                     ],
@@ -94,9 +333,31 @@ pub fn run() {
 
             app.on_menu_event(|app, event| {
                 match event.id().0.as_str() {
+                    "new_window" => {
+                        let _ = create_window(app, None);
+                    }
                     "open" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.emit("request-open-file", ());
+                        let label = app
+                            .state::<AppState>()
+                            .last_focused_label
+                            .lock()
+                            .unwrap()
+                            .clone();
+                        if let Some(label) = label {
+                            let _ = app.emit_to(
+                                EventTarget::WebviewWindow { label },
+                                "request-open-file",
+                                (),
+                            );
+                        }
+                    }
+                    "close_window" => {
+                        let target = app
+                            .webview_windows()
+                            .into_values()
+                            .find(|w| w.is_focused().unwrap_or(false));
+                        if let Some(window) = target {
+                            let _ = window.close();
                         }
                     }
                     "quit" => app.exit(0),

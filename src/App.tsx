@@ -66,6 +66,7 @@ function App() {
         statusCode: null,
         contentType: null,
       });
+      void platform.setWindowTitle(name);
     } catch (err) {
       setError(
         `Failed to parse HAR file: ${err instanceof Error ? err.message : "Unknown error"}`,
@@ -82,18 +83,28 @@ function App() {
     return cleanup;
   }, [loadHarContent]);
 
-  // Load file passed as CLI argument on startup (Linux/Windows file associations)
+  // Load file pre-assigned to this window (CLI arg or file association)
   useEffect(() => {
-    void platform.getStartupFile().then((data) => {
+    void platform.getWindowFile().then((data) => {
       if (data) loadHarContent(data.content, data.fileName);
     });
   }, [loadHarContent]);
 
-  // Handle file open dialog
+  // Keep a ref so handleOpenFile can read the current har value without being
+  // recreated on every file load (which would cause onRequestOpenFile to
+  // re-register its listener and drop events during the gap).
+  const harRef = useRef(har);
+  harRef.current = har;
+
+  // Handle file open dialog — reuse this window if empty, open a new one if not
   const handleOpenFile = useCallback(async () => {
     const result = await platform.openFileDialog();
-    if (result) {
+    if (!result) return;
+    if (harRef.current === null) {
       loadHarContent(result.content, result.fileName);
+      void platform.registerOpenFile(result.filePath);
+    } else {
+      void platform.openFileInNewWindow(result);
     }
   }, [loadHarContent]);
 
@@ -220,17 +231,24 @@ function App() {
         return;
       }
 
-      // Cmd/Ctrl+O — open file dialog
-      if ((e.metaKey || e.ctrlKey) && e.key === "o") {
+      // Cmd/Ctrl+N — new blank window
+      if ((e.metaKey || e.ctrlKey) && e.key === "n") {
         e.preventDefault();
-        void handleOpenFile();
+        void platform.newWindow();
+        return;
+      }
+
+      // Cmd/Ctrl+W — close current window
+      if ((e.metaKey || e.ctrlKey) && e.key === "w") {
+        e.preventDefault();
+        void platform.closeWindow();
         return;
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [detailPanelOpen, handleOpenFile]);
+  }, [detailPanelOpen]);
 
   // Parse the search string into structured filter tokens
   const filterTokens = useMemo(

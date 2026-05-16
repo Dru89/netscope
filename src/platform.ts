@@ -44,6 +44,11 @@ export async function setThemeMode(
   await getCurrentWindow().setTheme(mode === "system" ? null : mode);
 }
 
+export async function setWindowTitle(title: string): Promise<void> {
+  if (isElectron()) return; // Electron main process sets the title
+  await getCurrentWindow().setTitle(title);
+}
+
 export function signalReady(): void {
   if (isElectron()) {
     window.electronAPI.signalReady();
@@ -65,7 +70,7 @@ export function onHarFileOpened(
 ): () => void {
   if (isElectron()) return window.electronAPI.onHarFileOpened(callback);
 
-  // Phase 2: Rust emits 'har-file-opened' for CLI args and file associations
+  // Phase 2: Rust emits 'har-file-opened' for file associations on macOS
   let unlisten: (() => void) | undefined;
   listen<HarFileData>("har-file-opened", (event) => {
     callback(event.payload);
@@ -75,15 +80,51 @@ export function onHarFileOpened(
   return () => unlisten?.();
 }
 
-export async function getStartupFile(): Promise<HarFileData | null> {
+// Fetch the file pre-assigned to this window on startup (CLI arg or file association).
+export async function getWindowFile(): Promise<HarFileData | null> {
   if (isElectron()) return null;
-  return invoke<HarFileData | null>("get_startup_file");
+  return invoke<HarFileData | null>("get_window_file");
+}
+
+// Tell Rust which file this window has loaded, for dedup when another window
+// tries to open the same file.
+export async function registerOpenFile(filePath: string): Promise<void> {
+  if (isElectron()) return;
+  return invoke("register_open_file", { filePath });
+}
+
+// Open a file in a new window. If the file is already open somewhere, focuses
+// that window instead.
+export async function openFileInNewWindow(data: HarFileData): Promise<void> {
+  if (isElectron()) return;
+  return invoke("open_file_in_new_window", {
+    filePath: data.filePath,
+    content: data.content,
+    fileName: data.fileName,
+  });
+}
+
+export async function newWindow(): Promise<void> {
+  if (isElectron()) return;
+  return invoke("new_window");
+}
+
+export async function closeWindow(): Promise<void> {
+  if (isElectron()) return;
+  await getCurrentWindow().close();
 }
 
 export function onRequestOpenFile(callback: () => void): () => void {
   if (isElectron()) return () => {};
   let unlisten: (() => void) | undefined;
-  listen<null>("request-open-file", () => callback()).then((fn) => {
+  // Tauri 2's emit_to(EventTarget::WebviewWindow) still broadcasts to all
+  // windows, so every window receives this event. Guard with isFocused() so
+  // only the focused window acts on it.
+  listen<null>("request-open-file", () => {
+    void getCurrentWindow().isFocused().then((focused) => {
+      if (focused) callback();
+    });
+  }).then((fn) => {
     unlisten = fn;
   });
   return () => unlisten?.();
