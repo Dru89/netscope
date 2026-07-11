@@ -79,6 +79,31 @@ async function waitForPort(port: number, timeoutMs = 15_000): Promise<void> {
   throw new Error(`tauri-driver did not start on port ${port}`);
 }
 
+// Set a controlled React input's value via script injection. WebDriver's
+// Element Send Keys is unreliable through tauri-driver (the client falls
+// back to the legacy wire format, which WebKitWebDriver rejects with
+// "Missing text parameter"), so drive the input the way the app does:
+// native value setter + an input event React picks up.
+export async function setInputValue(
+  browser: WebdriverIO.Browser,
+  selector: string,
+  value: string,
+): Promise<void> {
+  await browser.execute(
+    (sel, val) => {
+      const input = document.querySelector(sel) as HTMLInputElement;
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        "value",
+      )!.set!;
+      setter.call(input, val);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    },
+    selector,
+    value,
+  );
+}
+
 // Poll until the callback stops throwing (WebDriver has no built-in
 // waitFor outside of element commands).
 export async function eventually<T>(

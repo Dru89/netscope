@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import path from "node:path";
-import { launchApp, eventually, FIXTURES, type Session } from "./helpers";
+import {
+  launchApp,
+  eventually,
+  setInputValue,
+  FIXTURES,
+  type Session,
+} from "./helpers";
 
 describe("welcome screen", () => {
   let session: Session;
@@ -65,8 +71,7 @@ describe("file open and interaction", () => {
     const { browser } = session;
     const before = (await browser.$$(".request-table tbody tr.row")).length;
 
-    const input = await browser.$(".toolbar-search input");
-    await input.setValue("method:POST");
+    await setInputValue(browser, ".toolbar-search input", "method:POST");
     const after = await eventually(async () => {
       const rows = await browser.$$(".request-table tbody tr.row");
       expect(rows.length).toBeLessThan(before);
@@ -74,7 +79,7 @@ describe("file open and interaction", () => {
     });
     expect(after).toBeGreaterThan(0);
 
-    await input.setValue("");
+    await setInputValue(browser, ".toolbar-search input", "");
     await eventually(async () => {
       const rows = await browser.$$(".request-table tbody tr.row");
       expect(rows.length).toBe(before);
@@ -83,7 +88,9 @@ describe("file open and interaction", () => {
 
   it("opens the detail panel on row click and closes on Escape", async () => {
     const { browser } = session;
-    const row = await browser.$(".request-table tbody tr.row");
+    // Click a cell, not the <tr> — WebDriver reports table rows as
+    // not-interactable targets
+    const row = await browser.$(".request-table tbody tr.row td");
     await row.click();
     await eventually(async () => {
       const panel = await browser.$(".detail-panel");
