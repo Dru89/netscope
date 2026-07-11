@@ -68,7 +68,13 @@ export function getEntryDomain(entry: HarEntry): string {
 }
 
 export function getTransferSize(entry: HarEntry): number {
-  // bodySize is the transfer size (compressed)
+  // Chrome exports set headersSize/bodySize to -1 and record the real
+  // on-the-wire size in _transferSize; without this, Size/summary/
+  // larger-than: read 0 for every modern Chrome capture.
+  const transferSize = entry.response._transferSize;
+  if (typeof transferSize === "number" && transferSize >= 0) {
+    return transferSize;
+  }
   const headersSize = Math.max(entry.response.headersSize, 0);
   const bodySize = Math.max(entry.response.bodySize, 0);
   return headersSize + bodySize;

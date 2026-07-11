@@ -95,6 +95,7 @@ Unit tests use **Vitest**; test files sit next to sources (`.test.ts`).
 src/utils/filterParser.test.ts       # Filter parser and matcher
 src/utils/filterSuggestions.test.ts  # Autocomplete suggestions
 src/utils/copyFormatters.test.ts     # Copy-as-cURL/fetch/PowerShell
+src/utils/har.test.ts                # Transfer-size handling (Chrome _transferSize)
 src/utils/highlightJson.test.ts      # Response-tab JSON syntax tint
 src-tauri/src/update.rs              # #[cfg(test)] date math for remind-later
 ```
