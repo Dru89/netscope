@@ -243,6 +243,9 @@ pub fn build(app: &tauri::AppHandle) -> tauri::Result<Menu<Wry>> {
 
 pub fn handle_event(app: &tauri::AppHandle, event: MenuEvent) {
     let id = event.id().0.as_str();
+    if crate::context_menu::handle_event(app, id) {
+        return;
+    }
     match id {
         "new_window" => {
             let _ = crate::windows::create_window(app, None);

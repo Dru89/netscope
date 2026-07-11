@@ -4,10 +4,26 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 
+import type { HarEntry, SortDirection, SortField } from "./types/har";
+import {
+  getResponseBody,
+  toCurl,
+  toFetch,
+  toFetchNode,
+  toPowerShell,
+} from "./utils/copyFormatters";
+
 export type HarFileData = {
   filePath: string;
   content: string;
   fileName: string;
+};
+
+export type RequestContextMenuData = {
+  entry: HarEntry;
+  allEntries: HarEntry[];
+  sortField: SortField;
+  sortDirection: SortDirection;
 };
 
 const isElectron = () =>
@@ -111,12 +127,84 @@ export function signalReady(): void {
   void invoke("signal_ready");
 }
 
-export function showRequestContextMenu(_data: unknown): void {
+// The native context menu round-trip (Tauri): Rust pops the menu; copy
+// actions come back as a context-menu-action event and are resolved here,
+// where the entry data already lives and the pure copy formatters run.
+// The formatted text goes back to Rust only to reach the clipboard.
+let contextMenuData: RequestContextMenuData | null = null;
+let contextMenuListenerReady = false;
+
+export function showRequestContextMenu(data: RequestContextMenuData): void {
   if (isElectron()) {
-    window.electronAPI.showRequestContextMenu(_data);
+    window.electronAPI.showRequestContextMenu(data);
     return;
   }
-  // Phase 2: native context menu via tauri-plugin-menu
+  if (!isTauri()) return;
+
+  contextMenuData = data;
+  if (!contextMenuListenerReady) {
+    contextMenuListenerReady = true;
+    void listen<{ targetLabel: string; action: string }>(
+      "context-menu-action",
+      (event) => {
+        if (event.payload.targetLabel !== getCurrentWindow().label) return;
+        handleContextMenuCopy(event.payload.action);
+      },
+    );
+  }
+  void invoke("show_request_context_menu", {
+    url: data.entry.request.url,
+    sortField: data.sortField,
+    sortDirection: data.sortDirection,
+  });
+}
+
+function handleContextMenuCopy(action: string): void {
+  const data = contextMenuData;
+  if (!data) return;
+  const { entry, allEntries } = data;
+  const joinAll = (format: (e: HarEntry) => string) =>
+    allEntries.map(format).join("\n\n");
+
+  let text: string | null = null;
+  switch (action) {
+    case "copy_url":
+      text = entry.request.url;
+      break;
+    case "copy_curl":
+      text = toCurl(entry);
+      break;
+    case "copy_fetch":
+      text = toFetch(entry);
+      break;
+    case "copy_fetch_node":
+      text = toFetchNode(entry);
+      break;
+    case "copy_powershell":
+      text = toPowerShell(entry);
+      break;
+    case "copy_response":
+      text = getResponseBody(entry);
+      break;
+    case "copy_all_urls":
+      text = allEntries.map((e) => e.request.url).join("\n");
+      break;
+    case "copy_all_curl":
+      text = joinAll(toCurl);
+      break;
+    case "copy_all_fetch":
+      text = joinAll(toFetch);
+      break;
+    case "copy_all_fetch_node":
+      text = joinAll(toFetchNode);
+      break;
+    case "copy_all_powershell":
+      text = joinAll(toPowerShell);
+      break;
+  }
+  if (text !== null) {
+    void invoke("set_clipboard", { text });
+  }
 }
 
 export function onHarFileOpened(
@@ -189,11 +277,15 @@ export function onContextMenuSort(
   if (isElectron()) return window.electronAPI.onContextMenuSort(callback);
   if (!isTauri()) return () => {};
 
-  // Phase 2: Rust emits 'context-menu-sort' from native context menu
   let unlisten: (() => void) | undefined;
-  listen<{ field: string; direction: string }>("context-menu-sort", (event) => {
-    callback(event.payload);
-  }).then((fn) => {
+  listen<{ targetLabel?: string; field: string; direction: string }>(
+    "context-menu-sort",
+    (event) => {
+      const { targetLabel } = event.payload;
+      if (targetLabel && targetLabel !== getCurrentWindow().label) return;
+      callback(event.payload);
+    },
+  ).then((fn) => {
     unlisten = fn;
   });
   return () => unlisten?.();

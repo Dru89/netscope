@@ -1,3 +1,4 @@
+mod context_menu;
 mod har;
 mod menu;
 mod prefs;
@@ -89,6 +90,28 @@ fn signal_ready(window: tauri::WebviewWindow) {
     }
 }
 
+// Pop the native request-row context menu. Only the URL and sort state cross
+// the IPC boundary; the entry data stays in the webview, which performs the
+// copy actions when the menu round-trips back (see context_menu module).
+#[tauri::command]
+fn show_request_context_menu(
+    app: tauri::AppHandle,
+    window: tauri::WebviewWindow,
+    url: String,
+    sort_field: String,
+    sort_direction: String,
+) -> tauri::Result<()> {
+    context_menu::show(&app, &window, url, sort_field, sort_direction)
+}
+
+// Clipboard writes go through Rust so the webview needs no clipboard
+// permission or plugin JS bindings.
+#[tauri::command]
+fn set_clipboard(app: tauri::AppHandle, text: String) {
+    use tauri_plugin_clipboard_manager::ClipboardExt;
+    let _ = app.clipboard().write_text(text);
+}
+
 fn find_har_arg(args: impl Iterator<Item = String>) -> Option<String> {
     args.skip(1)
         .find(|arg| arg.ends_with(".har") && std::path::Path::new(arg).exists())
@@ -133,6 +156,7 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .invoke_handler(tauri::generate_handler![
             read_har_file,
             get_window_file,
@@ -141,6 +165,8 @@ pub fn run() {
             open_paths_in_new_windows,
             new_window,
             signal_ready,
+            show_request_context_menu,
+            set_clipboard,
         ])
         .setup(move |app| {
             app.manage(AppState::new());

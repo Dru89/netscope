@@ -22,6 +22,7 @@ log = "0.4"
 # devtools: ship the View > Toggle Developer Tools item in release builds,
 # matching the Electron app (uses private APIs on macOS; fine outside MAS).
 tauri = { version = "2.11.1", features = ["devtools"] }
+tauri-plugin-clipboard-manager = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-log = "2"
 tauri-plugin-opener = "2"

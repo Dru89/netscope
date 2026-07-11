@@ -27,6 +27,9 @@ pub struct AppState {
     // Persisted to preferences.json and mirrored to the OS recent-documents
     // list (dock menu / jump list) by the recent module.
     pub recent_files: Mutex<Vec<String>>,
+    // Data for the currently-open request-row context menu (set when the
+    // menu pops, consumed by its click handler).
+    pub context_menu: Mutex<Option<crate::context_menu::ContextMenuState>>,
 }
 
 impl AppState {
@@ -40,6 +43,7 @@ impl AppState {
             window_positions: Mutex::new(HashMap::new()),
             zoom_levels: Mutex::new(HashMap::new()),
             recent_files: Mutex::new(Vec::new()),
+            context_menu: Mutex::new(None),
         }
     }
 
