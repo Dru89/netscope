@@ -61,7 +61,7 @@ All windows are created from Rust (`windows::create_window`) — none in
   from `Moved` events) because `outer_position()` fails on Wayland.
 - **Dedup:** `open_files: label → canonical path`. Every open path checks
   it first and focuses the existing window.
-- **Welcome reuse:** OS-driven opens load into a *focused* empty welcome
+- **Welcome reuse:** OS-driven opens load into a _focused_ empty welcome
   window (or the sole empty window during launch) instead of leaving one
   behind. An unfocused welcome window is never taken over.
 - **Pending files:** a file assigned at window creation is stashed in

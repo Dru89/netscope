@@ -18,8 +18,8 @@ export function WelcomeScreen({ onOpenFile, error }: WelcomeScreenProps) {
       </div>
       <h1 className="welcome-title">Netscope</h1>
       <p className="welcome-subtitle">
-        Open a <span className="welcome-kbd">.har</span> capture to inspect
-        its requests, or drop one here.
+        Open a <span className="welcome-kbd">.har</span> capture to inspect its
+        requests, or drop one here.
       </p>
       <div className="welcome-actions">
         <button className="welcome-open-btn" onClick={onOpenFile}>

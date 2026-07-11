@@ -287,24 +287,23 @@ function App() {
   const filteredEntries = useMemo(() => {
     if (!har) return [];
     return har.log.entries.filter((entry) => {
-        // Apply structured filter tokens from the search input
-        if (filterTokens.length > 0 && !matchEntry(filterTokens, entry))
-          return false;
-        // Apply toolbar button filters (these are separate from the text input)
-        if (filter.method && entry.request.method !== filter.method)
-          return false;
-        if (filter.statusCode) {
-          const status = entry.response.status.toString();
-          if (filter.statusCode.endsWith("xx")) {
-            if (!status.startsWith(filter.statusCode[0])) return false;
-          } else {
-            if (status !== filter.statusCode) return false;
-          }
+      // Apply structured filter tokens from the search input
+      if (filterTokens.length > 0 && !matchEntry(filterTokens, entry))
+        return false;
+      // Apply toolbar button filters (these are separate from the text input)
+      if (filter.method && entry.request.method !== filter.method) return false;
+      if (filter.statusCode) {
+        const status = entry.response.status.toString();
+        if (filter.statusCode.endsWith("xx")) {
+          if (!status.startsWith(filter.statusCode[0])) return false;
+        } else {
+          if (status !== filter.statusCode) return false;
         }
-        if (filter.contentType && getContentType(entry) !== filter.contentType)
-          return false;
-        return true;
-      });
+      }
+      if (filter.contentType && getContentType(entry) !== filter.contentType)
+        return false;
+      return true;
+    });
   }, [har, filterTokens, filter.method, filter.statusCode, filter.contentType]);
 
   const sortedEntries = useMemo(() => {

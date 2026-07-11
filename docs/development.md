@@ -32,14 +32,14 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 ## Scripts
 
-| Script                 | Description                                              |
-| ---------------------- | -------------------------------------------------------- |
-| `npm run dev`          | Tauri dev: Vite dev server + Rust shell with hot reload  |
-| `npm run dev:renderer` | Vite dev server only (renderer in a browser)             |
-| `npm run build`        | Full production build + bundles (`tauri build`)          |
-| `npm run build:vite`   | Type-check and bundle the renderer only                  |
-| `npm test`             | Renderer unit tests (Vitest)                             |
-| `npm run test:e2e`     | WebDriver E2E against the release binary (Linux)         |
+| Script                 | Description                                             |
+| ---------------------- | ------------------------------------------------------- |
+| `npm run dev`          | Tauri dev: Vite dev server + Rust shell with hot reload |
+| `npm run dev:renderer` | Vite dev server only (renderer in a browser)            |
+| `npm run build`        | Full production build + bundles (`tauri build`)         |
+| `npm run build:vite`   | Type-check and bundle the renderer only                 |
+| `npm test`             | Renderer unit tests (Vitest)                            |
+| `npm run test:e2e`     | WebDriver E2E against the release binary (Linux)        |
 
 `make` targets wrap these plus `make icons`, `make release`, and
 `make test-e2e` — see the Makefile.
@@ -76,15 +76,15 @@ rolling `nightly` release carries the updater manifest for that channel.
 
 ### Required GitHub Actions secrets
 
-| Secret                                | Purpose                                       |
-| ------------------------------------- | --------------------------------------------- |
-| `TAURI_SIGNING_PRIVATE_KEY`           | Updater artifact signing (minisign)           |
-| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`  | Password for that key (empty string)          |
-| `MAC_CERTIFICATE_BASE64`              | Base64-encoded .p12 Developer ID certificate  |
-| `MAC_CERTIFICATE_PASSWORD`            | Password for the .p12 file                    |
-| `APPLE_ID`                            | Apple ID email for notarization               |
-| `APPLE_APP_SPECIFIC_PASSWORD`         | App-specific password for notarization        |
-| `APPLE_TEAM_ID`                       | Apple Developer Team ID                       |
+| Secret                               | Purpose                                      |
+| ------------------------------------ | -------------------------------------------- |
+| `TAURI_SIGNING_PRIVATE_KEY`          | Updater artifact signing (minisign)          |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for that key (empty string)         |
+| `MAC_CERTIFICATE_BASE64`             | Base64-encoded .p12 Developer ID certificate |
+| `MAC_CERTIFICATE_PASSWORD`           | Password for the .p12 file                   |
+| `APPLE_ID`                           | Apple ID email for notarization              |
+| `APPLE_APP_SPECIFIC_PASSWORD`        | App-specific password for notarization       |
+| `APPLE_TEAM_ID`                      | Apple Developer Team ID                      |
 
 `GITHUB_TOKEN` is provided automatically. If macOS secrets are missing the
 build still succeeds but ships unsigned; if the updater key is missing,

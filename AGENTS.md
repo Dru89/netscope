@@ -123,15 +123,15 @@ Run `npm test` (and `cargo test --manifest-path src-tauri/Cargo.toml`) before co
 
 ### Global
 
-| Shortcut | Action                                                                            |
-| -------- | --------------------------------------------------------------------------------- |
-| Cmd+N    | Open a new empty window (native menu)                                             |
-| Cmd+O    | Open file — loads in place on welcome screen, opens new window if file is loaded  |
-| Cmd+W    | Close window (native menu)                                                        |
-| Cmd+R / Cmd+0 / Cmd+= / Cmd+- | Reload / reset zoom / zoom in / zoom out (View menu)         |
-| Escape   | Close detail panel and return focus to table; blur filter input                   |
-| /        | Focus the toolbar filter input                                                    |
-| Cmd+F    | Focus the toolbar filter (unless focus is in the detail panel)                    |
+| Shortcut                      | Action                                                                           |
+| ----------------------------- | -------------------------------------------------------------------------------- |
+| Cmd+N                         | Open a new empty window (native menu)                                            |
+| Cmd+O                         | Open file — loads in place on welcome screen, opens new window if file is loaded |
+| Cmd+W                         | Close window (native menu)                                                       |
+| Cmd+R / Cmd+0 / Cmd+= / Cmd+- | Reload / reset zoom / zoom in / zoom out (View menu)                             |
+| Escape                        | Close detail panel and return focus to table; blur filter input                  |
+| /                             | Focus the toolbar filter input                                                   |
+| Cmd+F                         | Focus the toolbar filter (unless focus is in the detail panel)                   |
 
 **Accelerator ownership:** window-level shortcuts (Cmd+N/O/W/R, zoom) belong to the **native menu only** — do not add web-layer keydown handlers for them; both firing was the source of the double-open bugs. Content shortcuts (/, Cmd+F, Escape, table nav) live in the web layer.
 
@@ -141,12 +141,12 @@ Run `npm test` (and `cargo test --manifest-path src-tauri/Cargo.toml`) before co
 
 Right-clicking a request row shows a **native** context menu built in Rust (`context_menu.rs`) and popped at the cursor. Only the URL and sort state cross IPC when it opens; entry data stays in the webview. Menu actions emit `context-menu-action` back to the originating window, which runs the pure copy formatters (`src/utils/copyFormatters.ts`) and writes the clipboard via the `set_clipboard` command.
 
-| Item                           | Action                                                              |
-| ------------------------------ | ------------------------------------------------------------------- |
-| Open in Browser                | Opens the URL via the opener plugin                                 |
-| Copy > Copy URL / as cURL / as fetch / as fetch (Node.js) / as PowerShell / Response | Single-entry copy variants   |
-| Copy > Copy All Listed ...     | Bulk variants over the currently filtered set                       |
-| Sort By > ...                  | Changes sort; checked item shows the current field + direction      |
+| Item                                                                                 | Action                                                         |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| Open in Browser                                                                      | Opens the URL via the opener plugin                            |
+| Copy > Copy URL / as cURL / as fetch / as fetch (Node.js) / as PowerShell / Response | Single-entry copy variants                                     |
+| Copy > Copy All Listed ...                                                           | Bulk variants over the currently filtered set                  |
+| Sort By > ...                                                                        | Changes sort; checked item shows the current field + direction |
 
 ## Multi-Window Behavior
 
@@ -170,17 +170,17 @@ Windows/Linux: the app exits when the last window closes (Tauri default). macOS:
 
 The toolbar input supports DevTools-style structured filters (`src/utils/filterParser.ts`):
 
-| Filter                 | Example                        | Matches                                     |
-| ---------------------- | ------------------------------ | ------------------------------------------- |
-| (plain text)           | `api`                          | URL or entry name substring                 |
-| `domain:`              | `domain:*.example.com`         | Request domain (wildcard supported)         |
-| `method:`              | `method:POST`                  | HTTP method                                 |
-| `status-code:`         | `status-code:4xx`              | Status code (exact or `4xx` range)          |
-| `mime-type:`           | `mime-type:json`               | Response MIME type substring                |
-| `larger-than:`         | `larger-than:1k`               | Transfer size threshold (`k`, `M`)          |
-| `scheme:`              | `scheme:https`                 | URL scheme                                  |
-| `has-response-header:` | `has-response-header:x-custom` | Presence of a response header               |
-| `url:`                 | `url:/api/v2`                  | URL substring (explicit)                    |
+| Filter                 | Example                        | Matches                             |
+| ---------------------- | ------------------------------ | ----------------------------------- |
+| (plain text)           | `api`                          | URL or entry name substring         |
+| `domain:`              | `domain:*.example.com`         | Request domain (wildcard supported) |
+| `method:`              | `method:POST`                  | HTTP method                         |
+| `status-code:`         | `status-code:4xx`              | Status code (exact or `4xx` range)  |
+| `mime-type:`           | `mime-type:json`               | Response MIME type substring        |
+| `larger-than:`         | `larger-than:1k`               | Transfer size threshold (`k`, `M`)  |
+| `scheme:`              | `scheme:https`                 | URL scheme                          |
+| `has-response-header:` | `has-response-header:x-custom` | Presence of a response header       |
+| `url:`                 | `url:/api/v2`                  | URL substring (explicit)            |
 
 Tokens AND-combine; `-` negates; quoted values allowed. Toolbar content-type chips are a second filter layer AND-ed with the text query. Autocomplete (`filterSuggestions.ts`) offers keys and real values from the loaded file. Default sort is Waterfall ascending (chronological).
 
@@ -214,15 +214,15 @@ Nightly (`nightly.yml`): daily cron + pushes to `nightly` + manual dispatch → 
 
 ### Required GitHub Actions secrets
 
-| Secret                        | Purpose                                        |
-| ----------------------------- | ---------------------------------------------- |
-| `TAURI_SIGNING_PRIVATE_KEY`   | Updater artifact signing (minisign)            |
-| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for the key (empty string)     |
-| `MAC_CERTIFICATE_BASE64`      | Base64-encoded .p12 Developer ID certificate   |
-| `MAC_CERTIFICATE_PASSWORD`    | Password for the .p12                          |
-| `APPLE_ID`                    | Apple ID email for notarization                |
-| `APPLE_APP_SPECIFIC_PASSWORD` | App-specific password for notarization         |
-| `APPLE_TEAM_ID`               | Apple Developer Team ID                        |
+| Secret                               | Purpose                                      |
+| ------------------------------------ | -------------------------------------------- |
+| `TAURI_SIGNING_PRIVATE_KEY`          | Updater artifact signing (minisign)          |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for the key (empty string)          |
+| `MAC_CERTIFICATE_BASE64`             | Base64-encoded .p12 Developer ID certificate |
+| `MAC_CERTIFICATE_PASSWORD`           | Password for the .p12                        |
+| `APPLE_ID`                           | Apple ID email for notarization              |
+| `APPLE_APP_SPECIFIC_PASSWORD`        | App-specific password for notarization       |
+| `APPLE_TEAM_ID`                      | Apple Developer Team ID                      |
 
 **Do not bump the version as part of code-change commits.** `make release` owns version bumps; code and version changes stay separate in history.
 

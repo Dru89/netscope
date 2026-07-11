@@ -37,9 +37,7 @@ describe("file open and interaction", () => {
   let session: Session;
 
   beforeAll(async () => {
-    session = await launchApp([
-      path.join(FIXTURES, "www.google.com.har"),
-    ]);
+    session = await launchApp([path.join(FIXTURES, "www.google.com.har")]);
   });
 
   afterAll(async () => {

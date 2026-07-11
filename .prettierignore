@@ -1,7 +1,10 @@
 dist/
-dist-electron/
-release/
-site/dist/
 node_modules/
 package-lock.json
+site/dist/
+src-tauri/target/
 test/fixtures/
+# Historical migration/design handoff — preserved verbatim
+handoff/
+# Design-token drop-in; keep byte-identical to the handoff source
+src/styles/tokens.css

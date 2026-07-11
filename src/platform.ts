@@ -77,9 +77,7 @@ export function isNativeDropHandled(): boolean {
 
 // Native drag-drop: delivers the real path so dropped files can be
 // registered for dedup like every other open path.
-export function onFileDrop(
-  callback: (data: HarFileData) => void,
-): () => void {
+export function onFileDrop(callback: (data: HarFileData) => void): () => void {
   if (!isTauri()) return () => {};
   let unlisten: (() => void) | undefined;
   getCurrentWebview()
@@ -200,14 +198,11 @@ export function onHarFileOpened(
 ): () => void {
   if (!isTauri()) return () => {};
   let unlisten: (() => void) | undefined;
-  listen<HarFileData & { targetLabel?: string }>(
-    "har-file-opened",
-    (event) => {
-      const { targetLabel } = event.payload;
-      if (targetLabel && targetLabel !== getCurrentWindow().label) return;
-      callback(event.payload);
-    },
-  ).then((fn) => {
+  listen<HarFileData & { targetLabel?: string }>("har-file-opened", (event) => {
+    const { targetLabel } = event.payload;
+    if (targetLabel && targetLabel !== getCurrentWindow().label) return;
+    callback(event.payload);
+  }).then((fn) => {
     unlisten = fn;
   });
   return () => unlisten?.();
