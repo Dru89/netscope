@@ -5,7 +5,7 @@
 **Netscope** is a desktop app for viewing and analyzing HTTP Archive (HAR) files, available for macOS, Windows, and Linux. It provides a Chrome DevTools-like network inspection experience as a standalone app. Built with Electron 41, React 19, TypeScript 6, and Vite 5.
 
 - **Package name:** `netscope`
-- **App ID:** `com.netscope.app`
+- **App ID:** `dev.unremarkable.netscope`
 - **Repository:** https://github.com/Dru89/netscope
 - **License:** MIT
 
