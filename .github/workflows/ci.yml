@@ -20,26 +20,25 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm test
 
-  e2e:
-    needs: check
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+  rust:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
         with:
-          lfs: true
+          workspaces: src-tauri
+      # Vite output must exist for tauri's context generation
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx tsc && npx vite build
-      - name: Run E2E tests (Linux)
-        if: runner.os == 'Linux'
-        run: xvfb-run --auto-servernum npx playwright test
-      - name: Run E2E tests (macOS/Windows)
-        if: runner.os != 'Linux'
-        run: npx playwright test
+      - run: npm run build:vite
+      - run: cargo test --manifest-path src-tauri/Cargo.toml
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings

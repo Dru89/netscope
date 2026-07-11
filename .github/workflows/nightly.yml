@@ -12,6 +12,12 @@ concurrency:
   group: nightly
   cancel-in-progress: true
 
+# Two-channel scheme: nightly artifacts live on dated pre-releases
+# (v4.0.0-nightly.20260711), but the updater needs a stable URL, so the
+# publish job copies the dated release's latest.json onto a rolling
+# "nightly" release. Nightly builds are pointed at that manifest via the
+# --config endpoint override below; stable builds never see it.
+
 jobs:
   # Compute the nightly version string once so all jobs agree, even if
   # the workflow straddles midnight UTC.
@@ -43,6 +49,8 @@ jobs:
 
   build:
     needs: [compute-version, test]
+    permissions:
+      contents: write
     strategy:
       # Keep going if one platform fails — partial nightly artifacts are still useful.
       fail-fast: false
@@ -50,10 +58,13 @@ jobs:
         include:
           - os: macos-latest
             platform: mac
+            args: --target universal-apple-darwin
           - os: windows-latest
             platform: win
+            args: ""
           - os: ubuntu-latest
             platform: linux
+            args: ""
 
     runs-on: ${{ matrix.os }}
 
@@ -65,80 +76,83 @@ jobs:
           node-version: 24
           cache: npm
 
-      - run: npm ci
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'mac' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      # pacman target requires bsdtar to build the .MTREE manifest
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
       - name: Install Linux build dependencies
         if: matrix.platform == 'linux'
-        run: sudo apt-get install -y libarchive-tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev \
+            libarchive-tools zstd
 
-      # Stamp the version into package.json without committing — the built
-      # artifacts will report the nightly version string.
+      - run: npm ci
+
+      # Stamp the version without committing — tauri.conf.json reads its
+      # version from package.json, so this versions the whole build.
       - name: Set nightly version
         shell: bash
         run: npm version ${{ needs.compute-version.outputs.nightly_version }} --no-git-tag-version
 
-      - name: Build (macOS)
-        if: matrix.platform == 'mac'
+      - name: Build and upload
+        uses: tauri-apps/tauri-action@v0
         env:
-          BUILD_CHANNEL: nightly
-          CSC_LINK: ${{ secrets.MAC_CERTIFICATE_BASE64 }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.MAC_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: "Developer ID Application"
           APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: npx tsc && npx vite build && npx electron-builder --mac --publish never --config electron-builder.nightly.js
-
-      - name: Build (Windows/Linux)
-        if: matrix.platform != 'mac'
-        env:
-          BUILD_CHANNEL: nightly
-        run: npx tsc && npx vite build && npx electron-builder --${{ matrix.platform }} --publish never --config electron-builder.nightly.js
-
-      # Upload distributable artifacts only — skip unpacked app directories.
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v7
         with:
-          name: nightly-${{ matrix.platform }}
-          path: |
-            release/*.dmg
-            release/*.zip
-            release/*.exe
-            release/*.AppImage
-            release/*.deb
-            release/*.pacman
-            release/*.yml
-            release/*.yaml
-          if-no-files-found: error
-          retention-days: 3
-
-  publish:
-    needs: [compute-version, build]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: release
-          merge-multiple: true
-
-      - name: List release artifacts
-        run: ls -la release/
-
-      - name: Create or update nightly GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.compute-version.outputs.tag_name }}
-          name: "Nightly — ${{ needs.compute-version.outputs.nightly_version }}"
-          prerelease: true
-          files: release/*
-          body: |
+          tagName: ${{ needs.compute-version.outputs.tag_name }}
+          releaseName: "Nightly — ${{ needs.compute-version.outputs.nightly_version }}"
+          releaseBody: |
             Automated nightly build — ${{ needs.compute-version.outputs.nightly_version }}
 
             This is a pre-release build intended for testing. It may be unstable.
             Stable users on the main release channel will not receive this update automatically.
+          prerelease: true
+          # Nightly builds check the rolling nightly manifest for updates
+          args: >-
+            ${{ matrix.args }}
+            --config {"plugins":{"updater":{"endpoints":["https://github.com/Dru89/netscope/releases/download/nightly/latest.json"]}}}
+
+      - name: Build and upload pacman package
+        if: matrix.platform == 'linux'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.compute-version.outputs.nightly_version }}"
+          DEB=$(find src-tauri/target/release/bundle/deb -name "*.deb" | head -1)
+          scripts/build-pacman.sh "$DEB" "$VERSION" dist-pacman
+          gh release upload "${{ needs.compute-version.outputs.tag_name }}" dist-pacman/*.pkg.tar.zst --clobber
+
+  # Copy the dated release's updater manifest onto the rolling "nightly"
+  # release so running nightly builds (which point at that fixed URL) see it.
+  publish-manifest:
+    needs: [compute-version, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Update rolling nightly manifest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.compute-version.outputs.tag_name }}
+        run: |
+          gh release download "$TAG" --pattern latest.json --dir manifest
+          gh release view nightly >/dev/null 2>&1 || \
+            gh release create nightly --prerelease \
+              --title "Nightly channel" \
+              --notes "Rolling updater manifest for the nightly channel. Artifacts live on the dated nightly releases."
+          gh release upload nightly manifest/latest.json --clobber

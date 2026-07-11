@@ -1,0 +1,16 @@
+[Desktop Entry]
+Categories={{categories}}
+{{#if comment}}
+Comment={{comment}}
+{{/if}}
+{{! %F so file managers pass the opened .har path as argv — the default
+    template omits it, which breaks double-click file association }}
+Exec={{exec}} %F
+Icon={{icon}}
+Name={{name}}
+Terminal=false
+Type=Application
+StartupWMClass=netscope
+{{#if mime_type}}
+MimeType={{mime_type}}
+{{/if}}

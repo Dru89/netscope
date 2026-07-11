@@ -138,11 +138,11 @@ function App() {
       );
   }, [loadHarContent]);
 
-  // Handle drag and drop (DOM path: Electron + plain-browser dev).
-  // Under Tauri the native drag-drop channel delivers drops instead — with
-  // real filesystem paths — via platform.onFileDrop below.
+  // DOM drag-and-drop only serves plain-browser dev: under Tauri the native
+  // drag-drop channel delivers drops instead — with real filesystem paths —
+  // via platform.onFileDrop below.
   const handleDrop = useCallback(
-    async (e: React.DragEvent) => {
+    (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
       if (platform.isNativeDropHandled()) return;
@@ -150,22 +150,13 @@ function App() {
       const files = e.dataTransfer.files;
       if (files.length === 0) return;
       const file = files[0];
-      const filePath = platform.getPathForFile(file);
-      if (filePath) {
-        // Electron: read via the main process so the window is registered
-        // for dedup and the recent-files list is updated
-        const result = await platform.readHarFile(filePath);
-        if (result) loadHarContent(result.content, result.fileName);
-      } else {
-        // Plain-browser dev: no filesystem path available
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          if (event.target?.result) {
-            loadHarContent(event.target.result as string, file.name);
-          }
-        };
-        reader.readAsText(file);
-      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          loadHarContent(event.target.result as string, file.name);
+        }
+      };
+      reader.readAsText(file);
     },
     [loadHarContent],
   );

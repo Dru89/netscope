@@ -23,20 +23,33 @@ jobs:
       - run: npm ci
       - run: npm test
 
-  # Build on all three platforms without publishing. Artifacts are
-  # uploaded to the workflow run so the publish job can download them.
+  # Build and upload per platform. tauri-action creates the GitHub Release
+  # from the tag on first upload, and each platform merges its entries into
+  # the shared latest.json updater manifest on the release. The stable
+  # updater endpoint (releases/latest/download/latest.json) then serves it.
+  #
+  # Updater artifact signing needs TAURI_SIGNING_PRIVATE_KEY(_PASSWORD).
+  # macOS code signing + notarization read the APPLE_* env vars; if they are
+  # missing the build still succeeds but ships unsigned (same behavior as
+  # the old Electron pipeline).
   build:
     needs: test
+    permissions:
+      contents: write
     strategy:
       fail-fast: true
       matrix:
         include:
           - os: macos-latest
             platform: mac
+            # One universal binary covers arm64 + x64
+            args: --target universal-apple-darwin
           - os: windows-latest
             platform: win
+            args: ""
           - os: ubuntu-latest
             platform: linux
+            args: ""
 
     runs-on: ${{ matrix.os }}
 
@@ -48,44 +61,50 @@ jobs:
           node-version: 24
           cache: npm
 
-      - run: npm ci
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'mac' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      # pacman target requires bsdtar to build the .MTREE manifest
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
       - name: Install Linux build dependencies
         if: matrix.platform == 'linux'
-        run: sudo apt-get install -y libarchive-tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev \
+            libarchive-tools zstd
 
-      # Build without publishing (--publish never). Each platform
-      # produces its artifacts in release/.
-      #
-      # macOS signing: electron-builder reads CSC_LINK (base64-encoded
-      # .p12 certificate) and CSC_KEY_PASSWORD directly, creating a
-      # temporary keychain internally. No manual keychain setup needed.
-      #
-      # macOS notarization: scripts/notarize.js reads APPLE_ID,
-      # APPLE_APP_SPECIFIC_PASSWORD, and APPLE_TEAM_ID. If any are
-      # missing, it skips notarization gracefully.
-      - name: Build (macOS)
-        if: matrix.platform == 'mac'
+      - run: npm ci
+
+      - name: Build and upload
+        uses: tauri-apps/tauri-action@v0
         env:
-          CSC_LINK: ${{ secrets.MAC_CERTIFICATE_BASE64 }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.MAC_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: "Developer ID Application"
           APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: npx tsc && npx vite build && npx electron-builder --mac --publish never
-
-      - name: Build (Windows/Linux)
-        if: matrix.platform != 'mac'
-        run: npx tsc && npx vite build && npx electron-builder --${{ matrix.platform }} --publish never
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: ${{ github.ref_name }}
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
 
       # Verify the macOS build was actually signed
       - name: Verify macOS code signature
         if: matrix.platform == 'mac'
         run: |
-          APP=$(find release -name "*.app" -maxdepth 2 | head -1)
+          APP=$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -name "*.app" -maxdepth 1 | head -1)
           if [ -z "$APP" ]; then
-            echo "::error::No .app bundle found in release/"
+            echo "::error::No .app bundle found"
             exit 1
           fi
           echo "Checking signature on $APP"
@@ -93,48 +112,14 @@ jobs:
           echo "Signature verified OK"
           codesign -dvvv "$APP" 2>&1 | grep "Authority"
 
-      # Upload build artifacts for the publish job. Exclude the
-      # unpacked app directories (mac-arm64/, mac-x64/, linux-unpacked/,
-      # win-unpacked/) — only upload the distributable files.
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-${{ matrix.platform }}
-          path: |
-            release/*.dmg
-            release/*.zip
-            release/*.exe
-            release/*.AppImage
-            release/*.deb
-            release/*.pacman
-            release/*.yml
-            release/*.yaml
-          if-no-files-found: error
-          retention-days: 1
-
-  # Publish all artifacts to a single GitHub Release. This job only
-  # runs if all three platform builds succeeded.
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: release
-          merge-multiple: true
-
-      - name: List release artifacts
-        run: ls -la release/
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: release/*
-          draft: false
-          generate_release_notes: true
+      # Arch can't run the AppImage out of the box (no FUSE 2), so wrap the
+      # deb tree into a real pacman package and add it to the release.
+      - name: Build and upload pacman package
+        if: matrix.platform == 'linux'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          DEB=$(find src-tauri/target/release/bundle/deb -name "*.deb" | head -1)
+          scripts/build-pacman.sh "$DEB" "$VERSION" dist-pacman
+          gh release upload "$GITHUB_REF_NAME" dist-pacman/*.pkg.tar.zst --clobber

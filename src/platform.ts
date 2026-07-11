@@ -1,4 +1,14 @@
-import { open as dialogOpen, save as dialogSave } from "@tauri-apps/plugin-dialog";
+// The seam between the React renderer and the Tauri shell. Every native
+// capability the UI needs goes through a named function here; nothing else
+// in src/ may import from @tauri-apps/*.
+//
+// Each function no-ops (or falls back) when Tauri isn't present so the
+// renderer still works in plain-browser dev (`npx vite` + ?fixture=).
+
+import {
+  open as dialogOpen,
+  save as dialogSave,
+} from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { listen } from "@tauri-apps/api/event";
@@ -26,14 +36,10 @@ export type RequestContextMenuData = {
   sortDirection: SortDirection;
 };
 
-const isElectron = () =>
-  typeof window !== "undefined" && !!window.electronAPI;
-
 const isTauri = () =>
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 export async function openFileDialog(): Promise<HarFileData | null> {
-  if (isElectron()) return window.electronAPI.openFileDialog();
   if (!isTauri()) return null;
 
   const selection = await dialogOpen({
@@ -59,18 +65,8 @@ export async function openFileDialog(): Promise<HarFileData | null> {
 export async function readHarFile(
   filePath: string,
 ): Promise<HarFileData | null> {
-  if (isElectron()) return window.electronAPI.readHarFile(filePath);
   if (!isTauri()) return null;
-
   return invoke<HarFileData | null>("read_har_file", { path: filePath });
-}
-
-// Real filesystem paths for DOM-dropped files exist only in Electron
-// (webUtils.getPathForFile). Plain-browser dev returns null and the caller
-// falls back to FileReader; Tauri drops never reach the DOM (see onFileDrop).
-export function getPathForFile(file: File): string | null {
-  if (isElectron()) return window.electronAPI.getPathForFile(file) || null;
-  return null;
 }
 
 // Tauri's webview intercepts file drags natively (dragDropEnabled default),
@@ -79,8 +75,8 @@ export function isNativeDropHandled(): boolean {
   return isTauri();
 }
 
-// Native drag-drop (Tauri only): delivers the real path so dropped files can
-// be registered for dedup like every other open path.
+// Native drag-drop: delivers the real path so dropped files can be
+// registered for dedup like every other open path.
 export function onFileDrop(
   callback: (data: HarFileData) => void,
 ): () => void {
@@ -103,14 +99,11 @@ export function onFileDrop(
 export async function setThemeMode(
   mode: "system" | "light" | "dark",
 ): Promise<void> {
-  if (isElectron()) return window.electronAPI.setThemeMode(mode);
   if (!isTauri()) return;
-
   await getCurrentWindow().setTheme(mode === "system" ? null : mode);
 }
 
 export async function setWindowTitle(title: string): Promise<void> {
-  if (isElectron()) return; // Electron main process sets the title
   if (!isTauri()) return;
   await getCurrentWindow().setTitle(title);
 }
@@ -119,26 +112,18 @@ export async function setWindowTitle(title: string): Promise<void> {
 // created hidden and shown on this signal (or a timeout) so opening a file
 // never flashes the welcome screen.
 export function signalReady(): void {
-  if (isElectron()) {
-    window.electronAPI.signalReady();
-    return;
-  }
   if (!isTauri()) return;
   void invoke("signal_ready");
 }
 
-// The native context menu round-trip (Tauri): Rust pops the menu; copy
-// actions come back as a context-menu-action event and are resolved here,
-// where the entry data already lives and the pure copy formatters run.
-// The formatted text goes back to Rust only to reach the clipboard.
+// The native context menu round-trip: Rust pops the menu; copy actions come
+// back as a context-menu-action event and are resolved here, where the
+// entry data already lives and the pure copy formatters run. The formatted
+// text goes back to Rust only to reach the clipboard.
 let contextMenuData: RequestContextMenuData | null = null;
 let contextMenuListenerReady = false;
 
 export function showRequestContextMenu(data: RequestContextMenuData): void {
-  if (isElectron()) {
-    window.electronAPI.showRequestContextMenu(data);
-    return;
-  }
   if (!isTauri()) return;
 
   contextMenuData = data;
@@ -207,15 +192,13 @@ function handleContextMenuCopy(action: string): void {
   }
 }
 
+// Rust emits this when it loads a file into an existing window (welcome-
+// window reuse for OS opens). The payload carries a target label because
+// emit_to still broadcasts to every window — ignore other windows' files.
 export function onHarFileOpened(
   callback: (data: HarFileData) => void,
 ): () => void {
-  if (isElectron()) return window.electronAPI.onHarFileOpened(callback);
   if (!isTauri()) return () => {};
-
-  // Rust emits this when it loads a file into an existing window (welcome-
-  // window reuse for OS opens). The payload carries a target label because
-  // emit_to still broadcasts to every window — ignore other windows' files.
   let unlisten: (() => void) | undefined;
   listen<HarFileData & { targetLabel?: string }>(
     "har-file-opened",
@@ -256,7 +239,6 @@ export async function openFileInNewWindow(data: HarFileData): Promise<void> {
 }
 
 // Save text (or base64-encoded binary) to a user-chosen location.
-// Tauri: native save dialog + Rust write. Elsewhere: browser download.
 export async function saveFile(
   suggestedName: string,
   contents: string,
@@ -268,6 +250,7 @@ export async function saveFile(
     await invoke("save_file", { path, contents, base64 });
     return;
   }
+  // Browser dev: download via a Blob
   const bytes = base64
     ? Uint8Array.from(atob(contents.trim()), (c) => c.charCodeAt(0))
     : new TextEncoder().encode(contents);
@@ -280,15 +263,17 @@ export async function saveFile(
 }
 
 export function onRequestOpenFile(callback: () => void): () => void {
-  if (isElectron() || !isTauri()) return () => {};
+  if (!isTauri()) return () => {};
   let unlisten: (() => void) | undefined;
   // Tauri 2's emit_to(EventTarget::WebviewWindow) still broadcasts to all
   // windows, so every window receives this event. Guard with isFocused() so
   // only the focused window acts on it.
   listen<null>("request-open-file", () => {
-    void getCurrentWindow().isFocused().then((focused) => {
-      if (focused) callback();
-    });
+    void getCurrentWindow()
+      .isFocused()
+      .then((focused) => {
+        if (focused) callback();
+      });
   }).then((fn) => {
     unlisten = fn;
   });
@@ -298,9 +283,7 @@ export function onRequestOpenFile(callback: () => void): () => void {
 export function onContextMenuSort(
   callback: (sort: { field: string; direction: string }) => void,
 ): () => void {
-  if (isElectron()) return window.electronAPI.onContextMenuSort(callback);
   if (!isTauri()) return () => {};
-
   let unlisten: (() => void) | undefined;
   listen<{ targetLabel?: string; field: string; direction: string }>(
     "context-menu-sort",

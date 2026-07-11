@@ -1,28 +1,25 @@
-.PHONY: dev build package test test-watch test-e2e lint format clean icons release site-dev site-build
+.PHONY: dev build package test test-watch lint format clean icons release site-dev site-build
 
-# Start the Vite dev server with Electron hot reload.
+# Start the app in dev mode (Vite dev server + Tauri shell with hot reload).
 dev:
 	npm run dev
 
-# Type-check and bundle (no Electron packaging).
+# Type-check and bundle the renderer (no packaging).
 build:
-	npx tsc && npx vite build
+	npm run build:vite
 
-# Full production build: type-check, bundle, and package for the current platform.
+# Full production build: bundle + Tauri packaging for the current platform.
 package:
 	npm run build
 
-# Run all tests (single run).
+# Run all tests (single run): renderer unit tests + Rust shell tests.
 test:
 	npm test
+	cargo test --manifest-path src-tauri/Cargo.toml
 
-# Run tests in watch mode.
+# Run renderer tests in watch mode.
 test-watch:
 	npm run test:watch
-
-# Run Playwright E2E tests (requires a build first).
-test-e2e: build
-	npx playwright test
 
 # Type-check only (no emit).
 lint:
@@ -32,39 +29,18 @@ lint:
 format:
 	npm run format
 
-# Remove all build artifacts.
+# Remove build artifacts.
 clean:
-	rm -rf dist dist-electron release
+	rm -rf dist src-tauri/target/release/bundle
 
 # Regenerate platform icons from the source image (images/netscope.png).
-# Requires ImageMagick (magick/convert) and macOS sips/iconutil.
-icons: build/icon.icns build/icon.ico build/icon.png
+# The Tauri CLI produces every size the bundler needs in src-tauri/icons/.
+icons:
+	npx tauri icon images/netscope.png
 
-build/icon.icns: images/netscope.png
-	@mkdir -p /tmp/netscope-icon.iconset
-	@sips -z 16 16     $< --out /tmp/netscope-icon.iconset/icon_16x16.png      >/dev/null
-	@sips -z 32 32     $< --out /tmp/netscope-icon.iconset/icon_16x16@2x.png   >/dev/null
-	@sips -z 32 32     $< --out /tmp/netscope-icon.iconset/icon_32x32.png      >/dev/null
-	@sips -z 64 64     $< --out /tmp/netscope-icon.iconset/icon_32x32@2x.png   >/dev/null
-	@sips -z 128 128   $< --out /tmp/netscope-icon.iconset/icon_128x128.png    >/dev/null
-	@sips -z 256 256   $< --out /tmp/netscope-icon.iconset/icon_128x128@2x.png >/dev/null
-	@sips -z 256 256   $< --out /tmp/netscope-icon.iconset/icon_256x256.png    >/dev/null
-	@sips -z 512 512   $< --out /tmp/netscope-icon.iconset/icon_256x256@2x.png >/dev/null
-	@sips -z 512 512   $< --out /tmp/netscope-icon.iconset/icon_512x512.png    >/dev/null
-	@sips -z 1024 1024 $< --out /tmp/netscope-icon.iconset/icon_512x512@2x.png >/dev/null
-	@iconutil -c icns /tmp/netscope-icon.iconset -o $@
-	@rm -rf /tmp/netscope-icon.iconset
-	@echo "Generated $@"
-
-build/icon.ico: images/netscope.png
-	@magick $< -resize 256x256 -define icon:auto-resize=256,128,64,48,32,16 $@
-	@echo "Generated $@"
-
-build/icon.png: images/netscope.png
-	@sips -z 512 512 $< --out $@ >/dev/null
-	@echo "Generated $@"
-
-# Release: bump version, commit, tag, and push. GitHub Actions handles the rest.
+# Release: bump version, commit, tag, and push. GitHub Actions handles the
+# rest. tauri.conf.json reads its version from package.json, so bumping one
+# file versions the whole app.
 #
 # Usage:
 #   make release                  # interactive prompt

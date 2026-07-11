@@ -8,14 +8,13 @@
     "type": "git",
     "url": "https://github.com/Dru89/netscope"
   },
-  "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build && electron-builder",
+    "dev": "tauri dev",
+    "dev:renderer": "vite",
+    "build": "tauri build",
     "build:vite": "tsc && vite build",
+    "tauri": "tauri",
     "release": "make release",
-    "preview": "vite preview",
-    "electron:dev": "vite --mode electron",
     "site:dev": "npm run dev --prefix site",
     "site:build": "npm run build --prefix site",
     "test": "vitest run",
@@ -26,122 +25,18 @@
   "dependencies": {
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-dialog": "^2.7.1",
-    "@tauri-apps/plugin-fs": "^2.5.1",
-    "electron-updater": "^6.8.3",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },
   "devDependencies": {
-    "@electron/notarize": "^3.1.1",
-    "@playwright/test": "^1.59.1",
     "@tauri-apps/cli": "^2.11.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.7.0",
-    "dotenv": "^17.4.2",
-    "electron": "^41.2.0",
-    "electron-builder": "^26.8.1",
     "prettier": "^3.8.2",
     "prettier-plugin-astro": "^0.14.1",
     "typescript": "^6.0.2",
     "vite": "^5.4.21",
-    "vite-plugin-electron": "^0.29.1",
-    "vite-plugin-electron-renderer": "^0.14.6",
     "vitest": "^4.1.4"
-  },
-  "build": {
-    "appId": "dev.unremarkable.netscope",
-    "productName": "Netscope",
-    "afterPack": "scripts/afterPack.js",
-    "afterSign": "scripts/notarize.js",
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "Dru89",
-        "repo": "netscope"
-      }
-    ],
-    "mac": {
-      "category": "public.app-category.developer-tools",
-      "icon": "build/icon.icns",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "arm64",
-            "x64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "arm64",
-            "x64"
-          ]
-        }
-      ],
-      "identity": "Developer ID Application",
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "notarize": false,
-      "entitlements": "entitlements.plist",
-      "entitlementsInherit": "entitlements.plist",
-      "fileAssociations": [
-        {
-          "ext": "har",
-          "name": "HAR File",
-          "description": "HTTP Archive File",
-          "role": "Viewer"
-        }
-      ]
-    },
-    "win": {
-      "icon": "build/icon.ico",
-      "target": [
-        "nsis"
-      ],
-      "fileAssociations": [
-        {
-          "ext": "har",
-          "name": "HAR File",
-          "description": "HTTP Archive File",
-          "icon": "build/har-document"
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": false,
-      "deleteAppDataOnUninstall": true,
-      "artifactName": "${productName}-Setup-${version}.${ext}"
-    },
-    "linux": {
-      "icon": "build/icon.png",
-      "target": [
-        "AppImage",
-        "deb",
-        "pacman"
-      ],
-      "category": "Development",
-      "mimeTypes": [
-        "application/json"
-      ],
-      "fileAssociations": [
-        {
-          "ext": "har",
-          "name": "HAR File",
-          "description": "HTTP Archive File",
-          "mimeType": "application/json"
-        }
-      ]
-    },
-    "files": [
-      "dist/**/*",
-      "dist-electron/**/*"
-    ],
-    "directories": {
-      "output": "release"
-    }
   }
 }
