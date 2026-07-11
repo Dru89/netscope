@@ -1,0 +1,176 @@
+/* ============================================================
+   Netscope — "Instrument" design tokens
+   Source of truth for the visual redesign. Plain CSS custom
+   properties; no framework. Light is :root, dark overrides via
+   [data-theme="dark"], and System mode falls back to the OS via
+   prefers-color-scheme (no flash: set data-theme before paint
+   only when the user has explicitly chosen Light/Dark).
+   ============================================================ */
+
+:root {
+  /* ---- Core surfaces & text ---- */
+  --ns-bg: #f7f8fa;                 /* app background, toolbar, summary bar */
+  --ns-surface: #ffffff;            /* table body, detail panel, inputs, buttons */
+  --ns-surface-raised: #fbfcfd;     /* column header, code blocks, dropdown footer */
+  --ns-surface-sunken: #eceef1;     /* segmented-control track, kbd chips */
+  --ns-hairline: #e6e8ec;           /* structural borders */
+  --ns-hairline-soft: #f1f2f5;      /* row separators, section dividers */
+  --ns-text: #1d2129;               /* primary text */
+  --ns-text-muted: #697180;         /* labels, values, secondary */
+  --ns-text-faint: #9aa1ad;         /* domains, placeholders, hints */
+
+  /* ---- Accent (selection, focus, active tab/filter, links) ---- */
+  --ns-accent: #4058d3;
+  --ns-accent-tint: rgba(64, 88, 211, .07);   /* selected row / suggestion bg */
+  --ns-focus-ring: rgba(64, 88, 211, .18);    /* 3px outer ring on focus */
+  --ns-error-tint: rgba(194, 69, 69, .05);    /* error row bg */
+
+  /* ---- Status (HTTP response class) ---- */
+  --ns-status-2xx: #2c8a5b;
+  --ns-status-3xx: #b07816;
+  --ns-status-4xx: #c24545;   /* also status 0 / network error */
+  --ns-status-5xx: #8f2e2e;
+
+  /* ---- Method (HTTP verb) ---- */
+  --ns-method-get: #3f63c8;
+  --ns-method-post: #2c8a5b;
+  --ns-method-put: #b07816;
+  --ns-method-delete: #c24545;
+  --ns-method-patch: #7952c1;
+
+  /* ---- Timing phases (waterfall + Timing tab; shared) ---- */
+  --ns-phase-blocked: #aeb4bd;   /* blocked + queueing + stalled */
+  --ns-phase-dns: #2f96a1;
+  --ns-phase-connect: #c98d2a;
+  --ns-phase-ssl: #8a63d2;
+  --ns-phase-send: #7c9cec;
+  --ns-phase-wait: #3fa06a;      /* wait / TTFB */
+  --ns-phase-receive: #4058d3;
+
+  /* ---- Content type (badge text + tinted badge bg) ---- */
+  --ns-type-doc: #3f63c8;    --ns-type-doc-bg: rgba(63, 99, 200, .10);
+  --ns-type-css: #7952c1;    --ns-type-css-bg: rgba(121, 82, 193, .10);
+  --ns-type-js: #b07816;     --ns-type-js-bg: rgba(176, 120, 22, .10);
+  --ns-type-img: #2c8a5b;    --ns-type-img-bg: rgba(44, 138, 91, .10);
+  --ns-type-font: #b04a8f;   --ns-type-font-bg: rgba(176, 74, 143, .10);
+  --ns-type-xhr: #12808a;    --ns-type-xhr-bg: rgba(18, 128, 138, .10);
+  --ns-type-other: #697180;  --ns-type-other-bg: rgba(105, 113, 128, .10);
+
+  /* ---- Type ---- */
+  --ns-font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --ns-font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --ns-size-base: 12px;      /* row names 12/500; meta & mono values 11/400 */
+  --ns-size-meta: 11px;
+  --ns-size-label: 10.5px;   /* column headers, 600, +0.02em tracking */
+  --ns-size-badge: 8.5px;    /* badge caps, 600 mono, +0.05em tracking */
+
+  /* ---- Dimensions ---- */
+  --ns-row-h: 26px;
+  --ns-colheader-h: 28px;
+  --ns-toolbar-h: 44px;
+  --ns-summary-h: 32px;
+  --ns-tabbar-h: 34px;       /* detail-panel tab bar */
+  --ns-panelheader-h: 40px;  /* detail-panel URL header */
+  --ns-inset-macos: 52px;    /* traffic-light top inset (macOS only) */
+
+  /* ---- Radii & space ---- */
+  --ns-r-badge: 4px;
+  --ns-r-control: 6px;       /* buttons, inputs, segmented track: 7px */
+  --ns-r-card: 7px;          /* code blocks, dropdown: 8px */
+  --ns-gutter: 14px;         /* horizontal page gutter */
+  --ns-space-1: 2px; --ns-space-2: 4px; --ns-space-3: 8px;
+  --ns-space-4: 12px; --ns-space-5: 16px;
+
+  /* ---- Waterfall ---- */
+  --ns-wf-bar-h: 8px;        /* per-row bar height, radius 2px, min seg width 2px */
+  --ns-wf-track: transparent;
+}
+
+/* ============ Dark ============ */
+[data-theme="dark"] {
+  --ns-bg: #17191d;
+  --ns-surface: #1d2025;
+  --ns-surface-raised: #191c20;
+  --ns-surface-sunken: #22262c;
+  --ns-hairline: #2a2e35;
+  --ns-hairline-soft: #22262c;
+  --ns-text: #e4e6ea;
+  --ns-text-muted: #8b93a1;
+  --ns-text-faint: #667080;
+
+  --ns-accent: #6d86e7;
+  --ns-accent-tint: rgba(109, 134, 231, .13);
+  --ns-focus-ring: rgba(109, 134, 231, .22);
+  --ns-error-tint: rgba(224, 122, 122, .07);
+
+  --ns-status-2xx: #5cba86;
+  --ns-status-3xx: #d3a04a;
+  --ns-status-4xx: #e07a7a;
+  --ns-status-5xx: #d65c5c;
+
+  --ns-method-get: #7d9bef;
+  --ns-method-post: #5cba86;
+  --ns-method-put: #d3a04a;
+  --ns-method-delete: #e07a7a;
+  --ns-method-patch: #a88ae0;
+
+  --ns-phase-blocked: #596273;
+  --ns-phase-dns: #4fb0ba;
+  --ns-phase-connect: #d3a04a;
+  --ns-phase-ssl: #a88ae0;
+  --ns-phase-send: #8fa9ee;
+  --ns-phase-wait: #55b07c;
+  --ns-phase-receive: #7d9bef;
+
+  --ns-type-doc: #7d9bef;    --ns-type-doc-bg: rgba(125, 155, 239, .14);
+  --ns-type-css: #b7a4ec;    --ns-type-css-bg: rgba(150, 120, 230, .16);
+  --ns-type-js: #d3a04a;     --ns-type-js-bg: rgba(211, 160, 74, .14);
+  --ns-type-img: #5cba86;    --ns-type-img-bg: rgba(92, 186, 134, .14);
+  --ns-type-font: #d883b8;   --ns-type-font-bg: rgba(216, 131, 184, .14);
+  --ns-type-xhr: #6fc7d1;    --ns-type-xhr-bg: rgba(60, 170, 185, .16);
+  --ns-type-other: #8b93a1;  --ns-type-other-bg: rgba(139, 147, 161, .14);
+}
+
+/* ============ System mode ============
+   When the user hasn't explicitly chosen, omit data-theme and let
+   the OS decide. Duplicate of the dark block above. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --ns-bg: #17191d;
+    --ns-surface: #1d2025;
+    --ns-surface-raised: #191c20;
+    --ns-surface-sunken: #22262c;
+    --ns-hairline: #2a2e35;
+    --ns-hairline-soft: #22262c;
+    --ns-text: #e4e6ea;
+    --ns-text-muted: #8b93a1;
+    --ns-text-faint: #667080;
+    --ns-accent: #6d86e7;
+    --ns-accent-tint: rgba(109, 134, 231, .13);
+    --ns-focus-ring: rgba(109, 134, 231, .22);
+    --ns-error-tint: rgba(224, 122, 122, .07);
+    --ns-status-2xx: #5cba86;
+    --ns-status-3xx: #d3a04a;
+    --ns-status-4xx: #e07a7a;
+    --ns-status-5xx: #d65c5c;
+    --ns-method-get: #7d9bef;
+    --ns-method-post: #5cba86;
+    --ns-method-put: #d3a04a;
+    --ns-method-delete: #e07a7a;
+    --ns-method-patch: #a88ae0;
+    --ns-phase-blocked: #596273;
+    --ns-phase-dns: #4fb0ba;
+    --ns-phase-connect: #d3a04a;
+    --ns-phase-ssl: #a88ae0;
+    --ns-phase-send: #8fa9ee;
+    --ns-phase-wait: #55b07c;
+    --ns-phase-receive: #7d9bef;
+    --ns-type-doc: #7d9bef;    --ns-type-doc-bg: rgba(125, 155, 239, .14);
+    --ns-type-css: #b7a4ec;    --ns-type-css-bg: rgba(150, 120, 230, .16);
+    --ns-type-js: #d3a04a;     --ns-type-js-bg: rgba(211, 160, 74, .14);
+    --ns-type-img: #5cba86;    --ns-type-img-bg: rgba(92, 186, 134, .14);
+    --ns-type-font: #d883b8;   --ns-type-font-bg: rgba(216, 131, 184, .14);
+    --ns-type-xhr: #6fc7d1;    --ns-type-xhr-bg: rgba(60, 170, 185, .16);
+    --ns-type-other: #8b93a1;  --ns-type-other-bg: rgba(139, 147, 161, .14);
+  }
+}

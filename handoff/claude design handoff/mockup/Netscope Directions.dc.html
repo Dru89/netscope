@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Spline+Sans:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f0eee9;font-family:system-ui,sans-serif}
+a{color:#2a78d6}a:hover{color:#1b5fb3}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-note{margin:0 0 24px;max-width:880px;font:400 12px/1.55 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-opts{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.4 system-ui,sans-serif;color:rgba(0,0,0,.6);max-width:1060px}
+.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.07),0 8px 24px rgba(0,0,0,.05);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:26px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t3" data-screen-label="Turn 3 — Response tab">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Response tab — pretty-printed JSON and inline image</span></div>
+<div class="dv-opts">
+
+<!-- 3a RESPONSE JSON -->
+<div class="dv-opt" id="3a">
+  <div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a><span><strong>Response — JSON</strong> — meta strip (type · size · pretty/raw switch), syntax-tinted body on the recessed code surface. Same grammar as <a class="dv-oid" href="#2e">2e</a>'s Source, light theme.</span></div>
+  <div class="dv-card" style="width:588px;background:#fff">
+    <div style="display:flex;gap:2px;height:34px;padding:0 10px;border-bottom:1px solid #e6e8ec;font:500 11.5px -apple-system,system-ui,sans-serif;align-items:stretch">
+      <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Headers</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Payload</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#4058d3;font-weight:600;box-shadow:inset 0 -2px 0 #4058d3">Response</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Timing</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Cookies</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Source</span>
+    </div>
+    <div style="padding:12px 16px 16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font:600 11px -apple-system,system-ui,sans-serif;color:#1d2129;white-space:nowrap">Response Body</span>
+        <span style="white-space:nowrap;font:400 10.5px ui-monospace,'SF Mono',Menlo,monospace;color:#9aa1ad">application/json · 303 B</span>
+        <span style="margin-left:auto;display:flex;align-items:center;gap:2px;padding:2px;background:#eceef1;border-radius:6px;font:500 10.5px -apple-system,system-ui,sans-serif">
+          <span style="padding:2px 8px;border-radius:4px;background:#fff;color:#1d2129;box-shadow:0 1px 1px rgba(20,24,33,.07)">Pretty</span><span style="padding:2px 8px;color:#697180">Raw</span>
+        </span>
+        <span style="font:500 11px -apple-system,system-ui,sans-serif;color:#697180;border:1px solid #dcdfe4;border-radius:5px;padding:3px 9px;background:#fff">Copy</span>
+      </div>
+      <div style="background:#fbfcfd;border:1px solid #f1f2f5;border-radius:7px;padding:12px 14px;font:400 11px/1.65 ui-monospace,'SF Mono',Menlo,monospace;color:#697180;white-space:pre">{
+  <span style="color:#3f63c8">"header"</span>: {
+    <span style="color:#3f63c8">"user"</span>: {
+      <span style="color:#3f63c8">"login"</span>: <span style="color:#2c8a5b">"octocat"</span>,
+      <span style="color:#3f63c8">"id"</span>: <span style="color:#b07816">583231</span>,
+      <span style="color:#3f63c8">"is_staff"</span>: <span style="color:#7952c1">false</span>
+    },
+    <span style="color:#3f63c8">"create_menu"</span>: {
+      <span style="color:#3f63c8">"items"</span>: [
+        { <span style="color:#3f63c8">"label"</span>: <span style="color:#2c8a5b">"New repository"</span>, <span style="color:#3f63c8">"href"</span>: <span style="color:#2c8a5b">"/new"</span> },
+        { <span style="color:#3f63c8">"label"</span>: <span style="color:#2c8a5b">"Import repository"</span>, <span style="color:#3f63c8">"href"</span>: <span style="color:#2c8a5b">"/new/import"</span> }
+      ],
+      <span style="color:#3f63c8">"enabled"</span>: <span style="color:#7952c1">true</span>,
+      <span style="color:#3f63c8">"count"</span>: <span style="color:#b07816">2</span>
+    }
+  }
+}</div>
+    </div>
+  </div>
+</div>
+
+<!-- 3b RESPONSE IMAGE -->
+<div class="dv-opt" id="3b">
+  <div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a><span><strong>Response — image</strong> — base64 bodies render inline on a checkerboard (transparency-safe), with dimensions + encoded size in the meta strip.</span></div>
+  <div class="dv-card" style="width:588px;background:#fff">
+    <div style="display:flex;gap:2px;height:34px;padding:0 10px;border-bottom:1px solid #e6e8ec;font:500 11.5px -apple-system,system-ui,sans-serif;align-items:stretch">
+      <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Headers</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Payload</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#4058d3;font-weight:600;box-shadow:inset 0 -2px 0 #4058d3">Response</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Timing</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Cookies</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Source</span>
+    </div>
+    <div style="padding:12px 16px 16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font:600 11px -apple-system,system-ui,sans-serif;color:#1d2129;white-space:nowrap">Response Body</span>
+        <span style="white-space:nowrap;font:400 10.5px ui-monospace,'SF Mono',Menlo,monospace;color:#9aa1ad">image/png · 460 × 460 · 8.1 kB base64</span>
+        <span style="margin-left:auto;font:500 11px -apple-system,system-ui,sans-serif;color:#697180;border:1px solid #dcdfe4;border-radius:5px;padding:3px 9px;background:#fff">Save As…</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;padding:22px;border:1px solid #f1f2f5;border-radius:7px;background:conic-gradient(#f1f2f5 0 25%,#fbfcfd 0 50%,#f1f2f5 0 75%,#fbfcfd 0) 0 0/16px 16px">
+        <div style="width:184px;height:184px;border-radius:6px;background:repeating-linear-gradient(45deg,#e9ebef 0,#e9ebef 6px,#f2f3f6 6px,#f2f3f6 12px);box-shadow:0 1px 4px rgba(20,24,33,.15);display:flex;align-items:center;justify-content:center">
+          <span style="font:400 10px ui-monospace,'SF Mono',Menlo,monospace;color:#697180;background:rgba(255,255,255,.85);padding:2px 7px;border-radius:4px">avatar.png · rendered inline</span>
+        </div>
+      </div>
+      <div style="margin-top:10px;font:400 10.5px -apple-system,system-ui,sans-serif;color:#9aa1ad">Base64 source collapsed — <span style="color:#4058d3;font-weight:500">Show raw data</span></div>
+    </div>
+  </div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "export the token spec as netscope-tokens.css" · "package the whole system as a handoff doc for Claude Code"</p>
+</section>
+
+<section class="dv-turn" id="t2" data-screen-label="Turn 2 — Instrument, all surfaces">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Instrument (<a class="dv-oid" href="#1a">1a</a>) — every surface, plus the token spec</span></div>
+<p class="dv-note">The full surface set in the Instrument direction: welcome state, toolbar states (autocomplete + active filter), the detail panel's three distinct tab layouts, the dark main screen, and the CSS custom-property spec ready to hand to Fable 5. Payload / Response / Cookies reuse the Headers grammar.</p>
+<div class="dv-opts">
+
+<!-- 2a WELCOME -->
+<div class="dv-opt" id="2a">
+  <div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a><span><strong>Welcome / empty state</strong> — waterfall-glyph app mark, one accent action, kbd hint, inline error slot (shown in dark).</span></div>
+  <div style="display:flex;gap:12px">
+    <div class="dv-card" style="width:520px;background:#f7f8fa">
+      <div style="display:flex;align-items:center;gap:7px;height:34px;padding:0 14px;background:#f0f1f4;border-bottom:1px solid #e6e8ec">
+        <span style="width:11px;height:11px;border-radius:50%;background:#d3d6dc"></span><span style="width:11px;height:11px;border-radius:50%;background:#d3d6dc"></span><span style="width:11px;height:11px;border-radius:50%;background:#d3d6dc"></span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;padding:64px 40px 72px;font-family:-apple-system,'Segoe UI',system-ui,sans-serif">
+        <div style="width:56px;height:56px;border-radius:14px;background:#fff;border:1px solid #e6e8ec;box-shadow:0 1px 2px rgba(20,24,33,.06);display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 12px;box-sizing:border-box">
+          <span style="display:block;height:5px;border-radius:2px;background:#4058d3;width:70%"></span>
+          <span style="display:block;height:5px;border-radius:2px;background:#3fa06a;width:100%;margin-left:15%"></span>
+          <span style="display:block;height:5px;border-radius:2px;background:#c98d2a;width:45%;margin-left:40%"></span>
+        </div>
+        <div style="margin-top:18px;font:600 19px -apple-system,system-ui,sans-serif;color:#1d2129;letter-spacing:-.01em">Netscope</div>
+        <div style="margin-top:6px;font:400 12.5px -apple-system,system-ui,sans-serif;color:#697180;text-align:center;line-height:1.5">Open, inspect, and analyze HTTP Archive files.<br>Drop a <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:11.5px;color:#1d2129;background:#eceef1;padding:1px 4px;border-radius:4px">.har</span> file here, or open one from the menu.</div>
+        <button style="margin-top:22px;height:32px;padding:0 18px;border:none;border-radius:7px;background:#4058d3;color:#fff;font:600 12.5px -apple-system,system-ui,sans-serif;box-shadow:0 1px 2px rgba(64,88,211,.35)">Open HAR File</button>
+        <div style="margin-top:12px;font:400 11.5px -apple-system,system-ui,sans-serif;color:#9aa1ad">or press <span style="font:500 10.5px ui-monospace,'SF Mono',Menlo,monospace;color:#697180;border:1px solid #dcdfe4;border-bottom-width:2px;border-radius:5px;padding:1px 5px;background:#fff">⌘O</span> to open</div>
+      </div>
+    </div>
+    <div class="dv-card" style="width:520px;background:#17191d;border-color:rgba(0,0,0,.4)">
+      <div style="display:flex;align-items:center;gap:7px;height:34px;padding:0 14px;background:#14161a;border-bottom:1px solid #2a2e35">
+        <span style="width:11px;height:11px;border-radius:50%;background:#33383f"></span><span style="width:11px;height:11px;border-radius:50%;background:#33383f"></span><span style="width:11px;height:11px;border-radius:50%;background:#33383f"></span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;padding:52px 40px 48px;font-family:-apple-system,'Segoe UI',system-ui,sans-serif">
+        <div style="width:56px;height:56px;border-radius:14px;background:#1d2025;border:1px solid #2a2e35;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 12px;box-sizing:border-box">
+          <span style="display:block;height:5px;border-radius:2px;background:#6d86e7;width:70%"></span>
+          <span style="display:block;height:5px;border-radius:2px;background:#55b07c;width:100%;margin-left:15%"></span>
+          <span style="display:block;height:5px;border-radius:2px;background:#d3a04a;width:45%;margin-left:40%"></span>
+        </div>
+        <div style="margin-top:18px;font:600 19px -apple-system,system-ui,sans-serif;color:#e4e6ea;letter-spacing:-.01em">Netscope</div>
+        <div style="margin-top:6px;font:400 12.5px -apple-system,system-ui,sans-serif;color:#8b93a1;text-align:center;line-height:1.5">Open, inspect, and analyze HTTP Archive files.<br>Drop a <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:11.5px;color:#e4e6ea;background:#272b31;padding:1px 4px;border-radius:4px">.har</span> file here, or open one from the menu.</div>
+        <button style="margin-top:22px;height:32px;padding:0 18px;border:none;border-radius:7px;background:#6d86e7;color:#14161a;font:600 12.5px -apple-system,system-ui,sans-serif">Open HAR File</button>
+        <div style="margin-top:12px;font:400 11.5px -apple-system,system-ui,sans-serif;color:#667080">or press <span style="font:500 10.5px ui-monospace,'SF Mono',Menlo,monospace;color:#8b93a1;border:1px solid #33383f;border-bottom-width:2px;border-radius:5px;padding:1px 5px;background:#1d2025">⌘O</span> to open</div>
+        <div style="margin-top:24px;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:7px;background:rgba(224,122,122,.09);border:1px solid rgba(224,122,122,.25)">
+          <span style="flex:none;width:14px;height:14px;border-radius:50%;background:rgba(224,122,122,.2);color:#e07a7a;font:700 10px -apple-system,system-ui,sans-serif;display:flex;align-items:center;justify-content:center">!</span>
+          <span style="font:400 11.5px -apple-system,system-ui,sans-serif;color:#e4a3a3">Couldn't read <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:11px">trace.har</span> — the file isn't valid HAR 1.2.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2b TOOLBAR STATES -->
+<div class="dv-opt" id="2b">
+  <div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a><span><strong>Toolbar states</strong> — focused filter with the autocomplete dropdown (keys + live values), and a content-type filter active. Count turns into "matched / total".</span></div>
+  <div class="dv-card" style="width:1060px;background:#f7f8fa">
+    <div style="display:flex;align-items:flex-start;gap:12px;height:158px;padding:10px 14px 0;border-bottom:1px solid #e6e8ec;font-family:-apple-system,'Segoe UI',system-ui,sans-serif">
+      <button style="height:26px;padding:0 12px;border:1px solid #dcdfe4;border-radius:6px;background:#fff;font:500 12px -apple-system,system-ui,sans-serif;color:#1d2129;box-shadow:0 1px 1px rgba(20,24,33,.04)">Open</button>
+      <span style="font:600 12.5px -apple-system,system-ui,sans-serif;color:#1d2129;line-height:26px">github.com.har</span>
+      <span style="white-space:nowrap;font:400 11.5px ui-monospace,'SF Mono',Menlo,monospace;color:#4058d3;line-height:26px">43 / 277</span>
+      <div style="flex:1;max-width:340px;position:relative">
+        <div style="display:flex;align-items:center;gap:7px;height:27px;padding:0 10px;border:1px solid #4058d3;border-radius:6px;background:#fff;box-shadow:0 0 0 3px rgba(64,88,211,.18)">
+          <span style="width:11px;height:11px;border:1.6px solid #4058d3;border-radius:50%;position:relative;flex:none"><span style="position:absolute;width:5px;height:1.6px;background:#4058d3;transform:rotate(45deg);left:9px;top:10px"></span></span>
+          <span style="font:400 12px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129">domain:git<span style="display:inline-block;width:1.5px;height:13px;background:#4058d3;vertical-align:-2px;margin-left:1px"></span></span>
+          <span style="margin-left:auto;width:15px;height:15px;border-radius:50%;background:#eceef1;color:#697180;font:500 10px -apple-system,system-ui,sans-serif;display:flex;align-items:center;justify-content:center">×</span>
+        </div>
+        <div style="position:absolute;top:31px;left:0;right:0;background:#fff;border:1px solid #e6e8ec;border-radius:8px;box-shadow:0 8px 28px rgba(20,24,33,.14),0 2px 6px rgba(20,24,33,.08);overflow:hidden;z-index:2">
+          <div style="padding:7px 10px 3px;font:600 9.5px -apple-system,system-ui,sans-serif;letter-spacing:.06em;color:#9aa1ad">VALUES · DOMAIN</div>
+          <div style="display:flex;align-items:center;gap:8px;height:26px;padding:0 10px;background:rgba(64,88,211,.07);box-shadow:inset 2px 0 0 #4058d3">
+            <span style="white-space:nowrap;font:400 11.5px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129"><b style="color:#4058d3;font-weight:600">git</b>hub.com</span>
+            <span style="margin-left:auto;font:400 10.5px ui-monospace,'SF Mono',Menlo,monospace;color:#9aa1ad">31</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;height:26px;padding:0 10px">
+            <span style="white-space:nowrap;font:400 11.5px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129"><b style="color:#4058d3;font-weight:600">git</b>hub.githubassets.com</span>
+            <span style="margin-left:auto;font:400 10.5px ui-monospace,'SF Mono',Menlo,monospace;color:#9aa1ad">228</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;height:26px;padding:0 10px;border-bottom:1px solid #f1f2f5">
+            <span style="white-space:nowrap;font:400 11.5px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129">avatars.<b style="color:#4058d3;font-weight:600">git</b>hubusercontent.com</span>
+            <span style="margin-left:auto;font:400 10.5px ui-monospace,'SF Mono',Menlo,monospace;color:#9aa1ad">12</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 10px;background:#fbfcfd">
+            <span style="font:400 10.5px -apple-system,system-ui,sans-serif;color:#9aa1ad">Keys:</span>
+            <span style="font:500 10.5px ui-monospace,'SF Mono',Menlo,monospace;color:#697180;background:#eceef1;border-radius:4px;padding:1px 5px">method:</span>
+            <span style="font:500 10.5px ui-monospace,'SF Mono',Menlo,monospace;color:#697180;background:#eceef1;border-radius:4px;padding:1px 5px">status:</span>
+            <span style="font:500 10.5px ui-monospace,'SF Mono',Menlo,monospace;color:#697180;background:#eceef1;border-radius:4px;padding:1px 5px">type:</span>
+            <span style="margin-left:auto;font:400 10px -apple-system,system-ui,sans-serif;color:#9aa1ad">↑↓ navigate · ⏎ apply</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:2px;padding:2px;background:#eceef1;border-radius:7px;height:24px">
+        <span style="padding:3px 9px;border-radius:5px;background:#fff;color:#4058d3;font:600 11px -apple-system,system-ui,sans-serif;box-shadow:0 1px 1px rgba(20,24,33,.07)">All</span>
+        <span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">XHR</span><span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">JS</span><span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">CSS</span><span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">Img</span><span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">Font</span><span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">Doc</span><span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">Other</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 14px;font-family:-apple-system,'Segoe UI',system-ui,sans-serif">
+      <button style="height:26px;padding:0 12px;border:1px solid #dcdfe4;border-radius:6px;background:#fff;font:500 12px -apple-system,system-ui,sans-serif;color:#1d2129;box-shadow:0 1px 1px rgba(20,24,33,.04)">Open</button>
+      <span style="font:600 12.5px -apple-system,system-ui,sans-serif;color:#1d2129">github.com.har</span>
+      <span style="white-space:nowrap;font:400 11.5px ui-monospace,'SF Mono',Menlo,monospace;color:#4058d3">17 / 277</span>
+      <div style="flex:1;max-width:340px;display:flex;align-items:center;gap:7px;height:27px;padding:0 10px;border:1px solid #dcdfe4;border-radius:6px;background:#fff">
+        <span style="width:11px;height:11px;border:1.6px solid #9aa1ad;border-radius:50%;position:relative;flex:none"><span style="position:absolute;width:5px;height:1.6px;background:#9aa1ad;transform:rotate(45deg);left:9px;top:10px"></span></span>
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:400 12px -apple-system,system-ui,sans-serif;color:#9aa1ad">Filter — try domain: or status:</span>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:2px;padding:2px;background:#eceef1;border-radius:7px">
+        <span style="padding:3px 9px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">All</span>
+        <span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">XHR</span><span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">JS</span><span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">CSS</span>
+        <span style="padding:3px 9px;border-radius:5px;background:#fff;color:#4058d3;font:600 11px -apple-system,system-ui,sans-serif;box-shadow:0 1px 1px rgba(20,24,33,.07)">Img</span>
+        <span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">Font</span><span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">Doc</span><span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">Other</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2c SPLIT VIEW HEADERS -->
+<div class="dv-opt" id="2c">
+  <div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a><span><strong>Detail panel — Headers</strong> — panel slides in at ~50%; list collapses to Name · Method · Status · Time. Method+status echoed in the panel header, mono URL, hairline-separated sections. Payload / Response / Cookies reuse this grammar.</span></div>
+  <div class="dv-card" style="width:1060px;background:#f7f8fa">
+    <div style="display:flex;align-items:center;gap:7px;height:34px;padding:0 14px;background:#f0f1f4;border-bottom:1px solid #e6e8ec">
+      <span style="width:11px;height:11px;border-radius:50%;background:#d3d6dc"></span><span style="width:11px;height:11px;border-radius:50%;background:#d3d6dc"></span><span style="width:11px;height:11px;border-radius:50%;background:#d3d6dc"></span>
+    </div>
+    <div style="display:flex;align-items:stretch">
+      <div style="flex:1;min-width:0;border-right:1px solid #e6e8ec">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 54px 46px 62px;align-items:center;height:28px;padding:0 14px;background:#fbfcfd;border-bottom:1px solid #e6e8ec;font:600 10.5px -apple-system,system-ui,sans-serif;color:#697180;letter-spacing:.02em">
+          <span>NAME</span><span>METHOD</span><span>STATUS</span><span style="text-align:right">TIME</span>
+        </div>
+        <div style="background:#fff">
+          <sc-for list="{{ rowsSplit }}" as="r" hint-placeholder-count="12">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 54px 46px 62px;align-items:center;height:26px;padding:0 14px;border-bottom:1px solid #f1f2f5;background:{{ r.bg }};box-shadow:{{ r.inset }}" style-hover="background:#f4f6f9">
+              <span style="display:flex;align-items:center;gap:8px;min-width:0">
+                <span style="flex:none;width:34px;text-align:center;font:600 8.5px ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:.05em;padding:2.5px 0;border-radius:4px;color:{{ r.bc }};background:{{ r.bbg }}">XHR</span>
+                <span style="font:500 12px -apple-system,system-ui,sans-serif;color:#1d2129;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.n }}</span>
+                <span style="font:400 11px -apple-system,system-ui,sans-serif;color:#9aa1ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.d }}</span>
+              </span>
+              <span style="font:600 11px ui-monospace,'SF Mono',Menlo,monospace;color:{{ r.mc }}">{{ r.m }}</span>
+              <span style="font:500 11px ui-monospace,'SF Mono',Menlo,monospace;color:#2c8a5b">200</span>
+              <span style="text-align:right;font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#697180">{{ r.tm }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="width:588px;flex:none;background:#fff;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-bottom:1px solid #e6e8ec">
+          <span style="font:600 11px ui-monospace,'SF Mono',Menlo,monospace;color:#3f63c8">GET</span>
+          <span style="font:500 11px ui-monospace,'SF Mono',Menlo,monospace;color:#2c8a5b">200</span>
+          <span style="min-width:0;white-space:nowrap;font:400 11.5px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">https://github.com/_global-navigation/payloads.json?return_to=https%3A%2F%2Fgit…</span>
+          <span style="flex:none;margin-left:auto;width:20px;height:20px;border-radius:5px;color:#697180;font:400 13px -apple-system,system-ui,sans-serif;display:flex;align-items:center;justify-content:center" style-hover="background:#eceef1">×</span>
+        </div>
+        <div style="display:flex;gap:2px;height:34px;padding:0 10px;border-bottom:1px solid #e6e8ec;font:500 11.5px -apple-system,system-ui,sans-serif;align-items:stretch">
+          <span style="display:flex;align-items:center;padding:0 9px;color:#4058d3;font-weight:600;box-shadow:inset 0 -2px 0 #4058d3">Headers</span>
+          <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Payload</span>
+          <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Response</span>
+          <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Timing</span>
+          <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Cookies</span>
+          <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Source</span>
+        </div>
+        <div style="padding:14px 16px 18px;overflow:hidden">
+          <div style="font:600 11px -apple-system,system-ui,sans-serif;color:#1d2129;margin-bottom:8px">General</div>
+          <div style="display:grid;grid-template-columns:128px minmax(0,1fr);row-gap:5px;column-gap:14px;font-size:11px;margin-bottom:16px">
+            <span style="font:400 11px -apple-system,system-ui,sans-serif;color:#697180">Request URL</span><span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129;word-break:break-all">https://github.com/_global-navigation/payloads.json?return_to=…</span>
+            <span style="font:400 11px -apple-system,system-ui,sans-serif;color:#697180">Request Method</span><span style="font:600 11px ui-monospace,'SF Mono',Menlo,monospace;color:#3f63c8">GET</span>
+            <span style="font:400 11px -apple-system,system-ui,sans-serif;color:#697180">Status Code</span><span style="font:500 11px ui-monospace,'SF Mono',Menlo,monospace;color:#2c8a5b">● 200</span>
+            <span style="font:400 11px -apple-system,system-ui,sans-serif;color:#697180">HTTP Version</span><span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129">http/2.0</span>
+            <span style="font:400 11px -apple-system,system-ui,sans-serif;color:#697180">Remote Address</span><span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129">140.82.113.4</span>
+            <span style="font:400 11px -apple-system,system-ui,sans-serif;color:#697180">Duration</span><span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129">207 ms</span>
+            <span style="font:400 11px -apple-system,system-ui,sans-serif;color:#697180">Transfer / Resource</span><span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129">0 B / 303 B</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:6px;border-top:1px solid #f1f2f5;padding-top:12px;margin-bottom:8px">
+            <span style="font:600 11px -apple-system,system-ui,sans-serif;color:#1d2129">Response Headers</span>
+            <span style="font:400 10.5px ui-monospace,'SF Mono',Menlo,monospace;color:#9aa1ad">14</span>
+          </div>
+          <div style="display:grid;grid-template-columns:170px minmax(0,1fr);row-gap:5px;column-gap:14px;margin-bottom:16px">
+            <span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#697180">cache-control</span><span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129">max-age=0, private, must-revalidate</span>
+            <span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#697180">content-encoding</span><span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129">gzip</span>
+            <span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#697180">content-security-policy</span><span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">default-src 'none'; base-uri 'self'; child-src github.githubassets.com github.com/assets-cdn/worker/ github.com/assets/ gist.github.com/assets-cdn/worker/; connect-src 'self' uploads.github.com…</span>
+            <span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#697180">content-type</span><span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129">application/json; charset=utf-8</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:6px;border-top:1px solid #f1f2f5;padding-top:12px;margin-bottom:8px">
+            <span style="font:600 11px -apple-system,system-ui,sans-serif;color:#1d2129">Request Headers</span>
+            <span style="font:400 10.5px ui-monospace,'SF Mono',Menlo,monospace;color:#9aa1ad">19</span>
+          </div>
+          <div style="display:grid;grid-template-columns:170px minmax(0,1fr);row-gap:5px;column-gap:14px">
+            <span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#697180">:authority</span><span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129">github.com</span>
+            <span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#697180">accept</span><span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129">application/json</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2d TIMING -->
+<div class="dv-opt" id="2d">
+  <div class="dv-olabel"><a class="dv-oid" href="#2d">2d</a><span><strong>Detail panel — Timing</strong> — phase chart uses the same waterfall colors; durations right-aligned in mono; raw data keeps HAR field names verbatim.</span></div>
+  <div class="dv-card" style="width:588px;background:#fff">
+    <div style="display:flex;gap:2px;height:34px;padding:0 10px;border-bottom:1px solid #e6e8ec;font:500 11.5px -apple-system,system-ui,sans-serif;align-items:stretch">
+      <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Headers</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Payload</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Response</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#4058d3;font-weight:600;box-shadow:inset 0 -2px 0 #4058d3">Timing</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Cookies</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#697180">Source</span>
+    </div>
+    <div style="padding:14px 16px 18px">
+      <div style="font:600 11px -apple-system,system-ui,sans-serif;color:#1d2129;margin-bottom:10px">Request Timing</div>
+      <sc-for list="{{ timing }}" as="p" hint-placeholder-count="5">
+        <div style="display:grid;grid-template-columns:112px minmax(0,1fr) 58px;align-items:center;gap:12px;height:22px">
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:3px;background:{{ p.c }}"></span><span style="font:400 11px -apple-system,system-ui,sans-serif;color:#697180;white-space:nowrap">{{ p.label }}</span></span>
+          <span style="position:relative;height:7px;background:#f1f2f5;border-radius:3px"><span style="position:absolute;top:0;bottom:0;left:{{ p.l }}%;width:{{ p.w }}%;min-width:2px;background:{{ p.c }};border-radius:3px"></span></span>
+          <span style="text-align:right;font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129;white-space:nowrap">{{ p.v }}</span>
+        </div>
+      </sc-for>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid #f1f2f5;margin-top:10px;padding-top:9px">
+        <span style="font:600 11.5px -apple-system,system-ui,sans-serif;color:#1d2129">Total</span>
+        <span style="font:600 12px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129;white-space:nowrap">207 ms</span>
+      </div>
+      <div style="font:600 11px -apple-system,system-ui,sans-serif;color:#1d2129;margin:16px 0 8px">Raw Timing Data</div>
+      <div style="background:#fbfcfd;border:1px solid #f1f2f5;border-radius:7px;padding:10px 12px;display:grid;grid-template-columns:150px minmax(0,1fr);row-gap:4px">
+        <sc-for list="{{ rawTiming }}" as="kv" hint-placeholder-count="9">
+          <span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#697180">{{ kv.0 }}</span>
+          <span style="font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129">{{ kv.1 }}</span>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2e SOURCE (dark) -->
+<div class="dv-opt" id="2e">
+  <div class="dv-olabel"><a class="dv-oid" href="#2e">2e</a><span><strong>Detail panel — Source</strong> (shown in dark) — in-panel find with match count and prev/next, amber highlight, syntax-tinted JSON on a recessed code surface.</span></div>
+  <div class="dv-card" style="width:588px;background:#1d2025;border-color:rgba(0,0,0,.4)">
+    <div style="display:flex;gap:2px;height:34px;padding:0 10px;border-bottom:1px solid #2a2e35;font:500 11.5px -apple-system,system-ui,sans-serif;align-items:stretch">
+      <span style="display:flex;align-items:center;padding:0 9px;color:#8b93a1">Headers</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#8b93a1">Payload</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#8b93a1">Response</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#8b93a1">Timing</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#8b93a1">Cookies</span>
+      <span style="display:flex;align-items:center;padding:0 9px;color:#6d86e7;font-weight:600;box-shadow:inset 0 -2px 0 #6d86e7">Source</span>
+    </div>
+    <div style="padding:12px 16px 16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font:600 11px -apple-system,system-ui,sans-serif;color:#e4e6ea;white-space:nowrap">HAR Entry Source</span>
+        <span style="margin-left:auto;font:500 11px -apple-system,system-ui,sans-serif;color:#8b93a1;border:1px solid #33383f;border-radius:5px;padding:3px 9px;background:#22262c">Copy</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;height:28px;padding:0 9px;border:1px solid #6d86e7;border-radius:6px;background:#17191d;box-shadow:0 0 0 3px rgba(109,134,231,.22);margin-bottom:10px">
+        <span style="white-space:nowrap;font:400 11.5px ui-monospace,'SF Mono',Menlo,monospace;color:#e4e6ea">"_resourceType"</span>
+        <span style="margin-left:auto;font:400 10.5px ui-monospace,'SF Mono',Menlo,monospace;color:#8b93a1;flex:none;white-space:nowrap">1 of 1</span>
+        <span style="width:18px;height:18px;border:1px solid #33383f;border-radius:4px;color:#8b93a1;font-size:9px;display:flex;align-items:center;justify-content:center;background:#22262c">▲</span>
+        <span style="width:18px;height:18px;border:1px solid #33383f;border-radius:4px;color:#8b93a1;font-size:9px;display:flex;align-items:center;justify-content:center;background:#22262c">▼</span>
+        <span style="width:18px;height:18px;border-radius:4px;color:#8b93a1;font-size:11px;display:flex;align-items:center;justify-content:center">×</span>
+      </div>
+      <div style="background:#17191d;border:1px solid #272b31;border-radius:7px;padding:12px 14px;font:400 11px/1.65 ui-monospace,'SF Mono',Menlo,monospace;color:#aeb4bd;white-space:pre">{
+  <span style="color:#7d9bef">"_priority"</span>: <span style="color:#5cba86">"High"</span>,
+  <span style="background:rgba(211,160,74,.35);box-shadow:0 0 0 1px rgba(211,160,74,.5);border-radius:2px;color:#e4e6ea">"_resourceType"</span>: <span style="color:#5cba86">"fetch"</span>,
+  <span style="color:#7d9bef">"cache"</span>: {},
+  <span style="color:#7d9bef">"connection"</span>: <span style="color:#5cba86">"443"</span>,
+  <span style="color:#7d9bef">"pageref"</span>: <span style="color:#5cba86">"page_1"</span>,
+  <span style="color:#7d9bef">"request"</span>: {
+    <span style="color:#7d9bef">"method"</span>: <span style="color:#5cba86">"GET"</span>,
+    <span style="color:#7d9bef">"url"</span>: <span style="color:#5cba86">"https://github.com/_global-navigation/…"</span>,
+    <span style="color:#7d9bef">"httpVersion"</span>: <span style="color:#5cba86">"http/2.0"</span>,
+    <span style="color:#7d9bef">"headers"</span>: [
+      { <span style="color:#7d9bef">"name"</span>: <span style="color:#5cba86">":authority"</span>, <span style="color:#7d9bef">"value"</span>: <span style="color:#5cba86">"github.com"</span> },
+      { <span style="color:#7d9bef">"name"</span>: <span style="color:#5cba86">":method"</span>, <span style="color:#7d9bef">"value"</span>: <span style="color:#5cba86">"GET"</span> }
+    ]
+  }
+}</div>
+    </div>
+  </div>
+</div>
+
+<!-- 2f MAIN DARK -->
+<div class="dv-opt" id="2f">
+  <div class="dv-olabel"><a class="dv-oid" href="#2f">2f</a><span><strong>Main screen — dark</strong> — same geometry, tokens swapped. Semantics brighten one step; hairlines and tints re-tuned so selected/error rows stay legible.</span></div>
+  <div class="dv-card" style="width:1060px;background:#17191d;border-color:rgba(0,0,0,.4)">
+    <div style="display:flex;align-items:center;gap:7px;height:34px;padding:0 14px;background:#14161a;border-bottom:1px solid #2a2e35">
+      <span style="width:11px;height:11px;border-radius:50%;background:#33383f"></span><span style="width:11px;height:11px;border-radius:50%;background:#33383f"></span><span style="width:11px;height:11px;border-radius:50%;background:#33383f"></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 14px;border-bottom:1px solid #2a2e35;font-family:-apple-system,'Segoe UI',system-ui,sans-serif">
+      <button style="height:26px;padding:0 12px;border:1px solid #33383f;border-radius:6px;background:#22262c;font:500 12px -apple-system,system-ui,sans-serif;color:#e4e6ea">Open</button>
+      <span style="font:600 12.5px -apple-system,system-ui,sans-serif;color:#e4e6ea">github.com.har</span>
+      <span style="white-space:nowrap;font:400 11.5px ui-monospace,'SF Mono',Menlo,monospace;color:#8b93a1">277 / 277</span>
+      <div style="flex:1;max-width:340px;display:flex;align-items:center;gap:7px;height:27px;padding:0 10px;border:1px solid #33383f;border-radius:6px;background:#14161a">
+        <span style="width:11px;height:11px;border:1.6px solid #667080;border-radius:50%;position:relative;flex:none"><span style="position:absolute;width:5px;height:1.6px;background:#667080;transform:rotate(45deg);left:9px;top:10px"></span></span>
+        <span style="font:400 12px -apple-system,system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#667080">Filter — try domain: or status:</span>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:2px;padding:2px;background:#22262c;border-radius:7px">
+        <span style="padding:3px 9px;border-radius:5px;background:#2c313a;color:#8fa9ee;font:600 11px -apple-system,system-ui,sans-serif">All</span>
+        <span style="padding:3px 8px;color:#8b93a1;font:500 11px -apple-system,system-ui,sans-serif">XHR</span><span style="padding:3px 8px;color:#8b93a1;font:500 11px -apple-system,system-ui,sans-serif">JS</span><span style="padding:3px 8px;color:#8b93a1;font:500 11px -apple-system,system-ui,sans-serif">CSS</span><span style="padding:3px 8px;color:#8b93a1;font:500 11px -apple-system,system-ui,sans-serif">Img</span><span style="padding:3px 8px;color:#8b93a1;font:500 11px -apple-system,system-ui,sans-serif">Font</span><span style="padding:3px 8px;color:#8b93a1;font:500 11px -apple-system,system-ui,sans-serif">Doc</span><span style="padding:3px 8px;color:#8b93a1;font:500 11px -apple-system,system-ui,sans-serif">Other</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 62px 92px 92px 70px 72px 250px;align-items:center;height:28px;padding:0 14px;background:#191c20;border-bottom:1px solid #2a2e35;font:600 10.5px -apple-system,system-ui,sans-serif;color:#8b93a1;letter-spacing:.02em">
+      <span>NAME</span><span>METHOD</span><span>STATUS</span><span>TYPE</span><span style="text-align:right">SIZE</span><span style="text-align:right">TIME</span><span style="padding-left:16px;color:#e4e6ea">WATERFALL <span style="color:#8fa9ee">▲</span></span>
+    </div>
+    <div style="background:#1d2025">
+      <sc-for list="{{ rowsAD }}" as="r" hint-placeholder-count="11">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 62px 92px 92px 70px 72px 250px;align-items:center;height:26px;padding:0 14px;border-bottom:1px solid #22262c;background:{{ r.bg }};box-shadow:{{ r.inset }}" style-hover="background:#22262c">
+          <span style="display:flex;align-items:center;gap:8px;min-width:0">
+            <span style="flex:none;width:34px;text-align:center;font:600 8.5px ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:.05em;padding:2.5px 0;border-radius:4px;color:{{ r.bc }};background:{{ r.bbg }}">{{ r.badge }}</span>
+            <span style="font:500 12px -apple-system,system-ui,sans-serif;color:{{ r.nc }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.n }}</span>
+            <span style="font:400 11px -apple-system,system-ui,sans-serif;color:#667080;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.d }}</span>
+          </span>
+          <span style="font:600 11px ui-monospace,'SF Mono',Menlo,monospace;color:{{ r.mc }}">{{ r.m }}</span>
+          <span style="font:500 11px ui-monospace,'SF Mono',Menlo,monospace;color:{{ r.sc }}">{{ r.s }} <span style="font:400 10px -apple-system,system-ui,sans-serif;color:#667080">{{ r.note }}</span></span>
+          <span style="font:400 11px -apple-system,system-ui,sans-serif;color:#8b93a1">{{ r.ty }}</span>
+          <span style="text-align:right;font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#8b93a1">{{ r.sz }}</span>
+          <span style="text-align:right;font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#8b93a1">{{ r.tm }}</span>
+          <span style="position:relative;height:8px;margin-left:16px">
+            <sc-for list="{{ r.segs }}" as="g" hint-placeholder-count="2">
+              <span style="position:absolute;top:0;bottom:0;left:{{ g.l }}%;width:{{ g.w }}%;background:{{ g.c }};border-radius:2px"></span>
+            </sc-for>
+          </span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="overflow:hidden;display:flex;align-items:center;gap:14px;height:32px;padding:0 14px;background:#17191d;border-top:1px solid #2a2e35;font:400 11px -apple-system,system-ui,sans-serif;color:#8b93a1">
+      <span style="white-space:nowrap"><b style="color:#e4e6ea;font-weight:600">277</b> requests</span><span style="width:1px;height:12px;background:#33383f"></span>
+      <span style="white-space:nowrap"><b style="color:#e4e6ea;font-weight:600">3.2 MB</b> transferred</span><span style="width:1px;height:12px;background:#33383f"></span>
+      <span style="white-space:nowrap"><b style="color:#e4e6ea;font-weight:600">18.6 MB</b> resources</span><span style="width:1px;height:12px;background:#33383f"></span>
+      <span style="white-space:nowrap"><b style="color:#e4e6ea;font-weight:600">2.1 min</b> total</span>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:2px;padding:2px;background:#22262c;border-radius:6px;font:500 10.5px -apple-system,system-ui,sans-serif">
+        <span style="padding:2px 8px;color:#8b93a1">System</span><span style="padding:2px 8px;color:#8b93a1">Light</span><span style="padding:2px 8px;border-radius:4px;background:#2c313a;color:#e4e6ea">Dark</span>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- 2g TOKEN SPEC -->
+<div class="dv-opt" id="2g">
+  <div class="dv-olabel"><a class="dv-oid" href="#2g">2g</a><span><strong>Token spec</strong> — the full custom-property set (light + dark) plus type, spacing, and key dimensions. This card is the Fable 5 handoff.</span></div>
+  <div class="dv-card" style="width:1060px;background:#fff;display:flex">
+    <div style="flex:1;padding:16px 18px;display:flex;flex-direction:column;gap:14px;border-right:1px solid #f1f2f5">
+      <sc-for list="{{ tokenGroups }}" as="tg" hint-placeholder-count="5">
+        <div>
+          <div style="font:600 10px -apple-system,system-ui,sans-serif;letter-spacing:.07em;color:#9aa1ad;margin-bottom:6px;text-transform:uppercase">{{ tg.group }}</div>
+          <sc-for list="{{ tg.items }}" as="tk" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:190px 1fr 1fr;align-items:center;gap:10px;height:21px">
+              <span style="font:400 10.5px ui-monospace,'SF Mono',Menlo,monospace;color:#1d2129">{{ tk.name }}</span>
+              <span style="display:flex;align-items:center;gap:6px"><span style="width:13px;height:13px;border-radius:4px;border:1px solid #e6e8ec;background:{{ tk.l }}"></span><span style="font:400 10px ui-monospace,'SF Mono',Menlo,monospace;color:#697180">{{ tk.l }}</span></span>
+              <span style="display:flex;align-items:center;gap:6px"><span style="width:13px;height:13px;border-radius:4px;border:1px solid #2a2e35;background:{{ tk.d }}"></span><span style="font:400 10px ui-monospace,'SF Mono',Menlo,monospace;color:#697180">{{ tk.d }}</span></span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <div style="width:330px;flex:none;padding:16px 18px;display:flex;flex-direction:column;gap:14px;background:#fbfcfd">
+      <div>
+        <div style="font:600 10px -apple-system,system-ui,sans-serif;letter-spacing:.07em;color:#9aa1ad;margin-bottom:6px">TYPE</div>
+        <div style="font:400 11px/1.7 -apple-system,system-ui,sans-serif;color:#1d2129">UI — <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:10.5px;color:#697180">-apple-system, 'Segoe UI', system-ui</span><br>Data — <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:10.5px;color:#697180">ui-monospace, 'SF Mono', Menlo</span><br>Base 12px · rows 12px/500 · meta 11px · labels 10.5px/600 · badges 8.5px caps mono</div>
+      </div>
+      <div>
+        <div style="font:600 10px -apple-system,system-ui,sans-serif;letter-spacing:.07em;color:#9aa1ad;margin-bottom:6px">DIMENSIONS</div>
+        <div style="font:400 11px/1.7 -apple-system,system-ui,sans-serif;color:#1d2129">Row <b>26px</b> · column header <b>28px</b> · toolbar <b>44px</b> · summary <b>32px</b> · detail tab bar <b>34px</b> · panel header <b>40px</b> · macOS top inset <b>52px</b></div>
+      </div>
+      <div>
+        <div style="font:600 10px -apple-system,system-ui,sans-serif;letter-spacing:.07em;color:#9aa1ad;margin-bottom:6px">RADII &amp; SPACE</div>
+        <div style="font:400 11px/1.7 -apple-system,system-ui,sans-serif;color:#1d2129">Radii <b>4 / 6 / 7</b> (badge / control / card) · gutter <b>14px</b> · cell gap <b>8px</b> · space scale 2·4·8·12·16</div>
+      </div>
+      <div>
+        <div style="font:600 10px -apple-system,system-ui,sans-serif;letter-spacing:.07em;color:#9aa1ad;margin-bottom:6px">STATES</div>
+        <div style="font:400 11px/1.7 -apple-system,system-ui,sans-serif;color:#1d2129">Hover — surface-raised tint · Selected — <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:10.5px;color:#697180">accent-tint</span> + 2px accent inset · Error row — <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:10.5px;color:#697180">error-tint</span> + 4xx text · Focus — 3px <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:10.5px;color:#697180">focus-ring</span> outside border · Waterfall bars 8px, r2, phase colors</div>
+      </div>
+      <div>
+        <div style="font:600 10px -apple-system,system-ui,sans-serif;letter-spacing:.07em;color:#9aa1ad;margin-bottom:6px">FOCUS RING</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span style="height:26px;padding:0 12px;display:flex;align-items:center;border:1px solid #4058d3;border-radius:6px;background:#fff;font:500 12px -apple-system,system-ui,sans-serif;color:#1d2129;box-shadow:0 0 0 3px rgba(64,88,211,.18)">Focused</span>
+          <span style="height:26px;padding:0 12px;display:flex;align-items:center;border:1px solid #dcdfe4;border-radius:6px;background:#fff;font:500 12px -apple-system,system-ui,sans-serif;color:#1d2129">Default</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "tweak the accent" · "show Response tab with JSON + inline image" · "export the token spec as a CSS file for Fable 5"</p>
+</section>
+
+<section class="dv-turn" id="t1" data-screen-label="Turn 1 — Three directions">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Netscope — three visual directions for the core view</span></div>
+<p class="dv-note">Each direction shows the main screen in its primary theme, a strip of the opposite theme, and its semantic palette (status · method · timing phases · content types). Row 6 is <strong>selected</strong>, the mona-sans row shows the <strong>disk-cache</strong> status variant, and the analytics row shows the <strong>error</strong> state. All three keep the DevTools structure; they differ in type, temperature, badge grammar, waterfall treatment, and density. Everything maps to CSS custom properties.</p>
+<div class="dv-opts">
+
+<!-- ============ 1a INSTRUMENT ============ -->
+<div class="dv-opt" id="1a">
+  <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a><span><strong>Instrument</strong> — system sans + SF Mono, cool graphite, single cobalt accent. Pill badges, rounded waterfall bars. 26px rows, 12px base. Closest in spirit to Linear: quiet chrome, color reserved for semantics.</span></div>
+  <div class="dv-card" style="width:1060px;background:#f7f8fa">
+    <div style="display:flex;align-items:center;gap:7px;height:34px;padding:0 14px;background:#f0f1f4;border-bottom:1px solid #e6e8ec">
+      <span style="width:11px;height:11px;border-radius:50%;background:#d3d6dc"></span><span style="width:11px;height:11px;border-radius:50%;background:#d3d6dc"></span><span style="width:11px;height:11px;border-radius:50%;background:#d3d6dc"></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 14px;background:#f7f8fa;border-bottom:1px solid #e6e8ec;font-family:-apple-system,'Segoe UI',system-ui,sans-serif">
+      <button style="height:26px;padding:0 12px;border:1px solid #dcdfe4;border-radius:6px;background:#fff;font:500 12px -apple-system,system-ui,sans-serif;color:#1d2129;box-shadow:0 1px 1px rgba(20,24,33,.04)">Open</button>
+      <span style="font:600 12.5px -apple-system,system-ui,sans-serif;color:#1d2129">github.com.har</span>
+      <span style="white-space:nowrap;font:400 11.5px ui-monospace,'SF Mono',Menlo,monospace;color:#697180">277 / 277</span>
+      <div style="flex:1;max-width:340px;display:flex;align-items:center;gap:7px;height:27px;padding:0 10px;border:1px solid #dcdfe4;border-radius:6px;background:#fff">
+        <span style="width:11px;height:11px;border:1.6px solid #9aa1ad;border-radius:50%;position:relative;flex:none"><span style="position:absolute;width:5px;height:1.6px;background:#9aa1ad;transform:rotate(45deg);left:9px;top:10px"></span></span>
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:400 12px -apple-system,system-ui,sans-serif;color:#9aa1ad">Filter — try domain: or status:</span>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:2px;padding:2px;background:#eceef1;border-radius:7px">
+        <span style="padding:3px 9px;border-radius:5px;background:#fff;color:#4058d3;font:600 11px -apple-system,system-ui,sans-serif;box-shadow:0 1px 1px rgba(20,24,33,.07)">All</span>
+        <span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">XHR</span>
+        <span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">JS</span>
+        <span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">CSS</span>
+        <span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">Img</span>
+        <span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">Font</span>
+        <span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">Doc</span>
+        <span style="padding:3px 8px;color:#697180;font:500 11px -apple-system,system-ui,sans-serif">Other</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 62px 92px 92px 70px 72px 250px;align-items:center;height:28px;padding:0 14px;background:#fbfcfd;border-bottom:1px solid #e6e8ec;font:600 10.5px -apple-system,system-ui,sans-serif;color:#697180;letter-spacing:.02em">
+      <span>NAME</span><span>METHOD</span><span>STATUS</span><span>TYPE</span><span style="text-align:right">SIZE</span><span style="text-align:right">TIME</span><span style="padding-left:16px;color:#1d2129">WATERFALL <span style="color:#4058d3">▲</span></span>
+    </div>
+    <div style="background:#fff">
+      <sc-for list="{{ rowsA }}" as="r" hint-placeholder-count="11">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 62px 92px 92px 70px 72px 250px;align-items:center;height:26px;padding:0 14px;border-bottom:1px solid #f1f2f5;background:{{ r.bg }};box-shadow:{{ r.inset }}" style-hover="background:#f4f6f9">
+          <span style="display:flex;align-items:center;gap:8px;min-width:0">
+            <span style="flex:none;width:34px;text-align:center;font:600 8.5px ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:.05em;padding:2.5px 0;border-radius:4px;color:{{ r.bc }};background:{{ r.bbg }}">{{ r.badge }}</span>
+            <span style="font:500 12px -apple-system,system-ui,sans-serif;color:{{ r.nc }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.n }}</span>
+            <span style="font:400 11px -apple-system,system-ui,sans-serif;color:#9aa1ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.d }}</span>
+          </span>
+          <span style="font:600 11px ui-monospace,'SF Mono',Menlo,monospace;color:{{ r.mc }}">{{ r.m }}</span>
+          <span style="font:500 11px ui-monospace,'SF Mono',Menlo,monospace;color:{{ r.sc }}">{{ r.s }} <span style="font:400 10px -apple-system,system-ui,sans-serif;color:#9aa1ad">{{ r.note }}</span></span>
+          <span style="font:400 11px -apple-system,system-ui,sans-serif;color:#697180">{{ r.ty }}</span>
+          <span style="text-align:right;font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#697180">{{ r.sz }}</span>
+          <span style="text-align:right;font:400 11px ui-monospace,'SF Mono',Menlo,monospace;color:#697180">{{ r.tm }}</span>
+          <span style="position:relative;height:8px;margin-left:16px;border-radius:3px;background:transparent">
+            <sc-for list="{{ r.segs }}" as="g" hint-placeholder-count="2">
+              <span style="position:absolute;top:0;bottom:0;left:{{ g.l }}%;width:{{ g.w }}%;background:{{ g.c }};border-radius:2px"></span>
+            </sc-for>
+          </span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="overflow:hidden;display:flex;align-items:center;gap:14px;height:32px;padding:0 14px;background:#f7f8fa;border-top:1px solid #e6e8ec;font:400 11px -apple-system,system-ui,sans-serif;color:#697180">
+      <span style="white-space:nowrap"><b style="color:#1d2129;font-weight:600">277</b> requests</span><span style="width:1px;height:12px;background:#dcdfe4"></span>
+      <span style="white-space:nowrap"><b style="color:#1d2129;font-weight:600">3.2 MB</b> transferred</span><span style="width:1px;height:12px;background:#dcdfe4"></span>
+      <span style="white-space:nowrap"><b style="color:#1d2129;font-weight:600">18.6 MB</b> resources</span><span style="width:1px;height:12px;background:#dcdfe4"></span>
+      <span style="white-space:nowrap"><b style="color:#1d2129;font-weight:600">2.1 min</b> total</span>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:2px;padding:2px;background:#eceef1;border-radius:6px;font:500 10.5px -apple-system,system-ui,sans-serif">
+        <span style="padding:2px 8px;border-radius:4px;background:#fff;color:#1d2129;box-shadow:0 1px 1px rgba(20,24,33,.07)">System</span><span style="padding:2px 8px;color:#697180">Light</span><span style="padding:2px 8px;color:#697180">Dark</span>
+      </span>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;align-items:flex-start">
+    <div class="dv-card" style="width:560px;background:#17191d;border-color:rgba(0,0,0,.4)">
+      <div style="padding:8px 14px 6px;font:600 9.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#8b93a1">DARK</div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 52px 44px 130px;align-items:center;height:26px;padding:0 14px;border-top:1px solid #2a2e35">
+        <span style="display:flex;align-items:center;gap:8px"><span style="width:34px;text-align:center;font:600 8.5px ui-monospace,Menlo,monospace;padding:2.5px 0;border-radius:4px;color:#b7a4ec;background:rgba(150,120,230,.16)">CSS</span><span style="font:500 12px -apple-system,system-ui,sans-serif;color:#e4e6ea">light-8810aba6e2.css</span></span>
+        <span style="font:600 11px ui-monospace,Menlo,monospace;color:#7d9bef">GET</span><span style="font:500 11px ui-monospace,Menlo,monospace;color:#5cba86">200</span>
+        <span style="position:relative;height:8px"><span style="position:absolute;left:6%;width:5%;top:0;bottom:0;background:#4fb0ba;border-radius:2px"></span><span style="position:absolute;left:11%;width:16%;top:0;bottom:0;background:#5cba86;border-radius:2px"></span><span style="position:absolute;left:27%;width:7%;top:0;bottom:0;background:#7d9bef;border-radius:2px"></span></span>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 52px 44px 130px;align-items:center;height:26px;padding:0 14px;border-top:1px solid #2a2e35;background:rgba(109,134,231,.13);box-shadow:inset 2px 0 0 #6d86e7">
+        <span style="display:flex;align-items:center;gap:8px"><span style="width:34px;text-align:center;font:600 8.5px ui-monospace,Menlo,monospace;padding:2.5px 0;border-radius:4px;color:#6fc7d1;background:rgba(60,170,185,.16)">XHR</span><span style="font:500 12px -apple-system,system-ui,sans-serif;color:#e4e6ea">payloads.json</span><span style="font:400 11px -apple-system,system-ui,sans-serif;color:#8b93a1">github.com</span></span>
+        <span style="font:600 11px ui-monospace,Menlo,monospace;color:#7d9bef">GET</span><span style="font:500 11px ui-monospace,Menlo,monospace;color:#5cba86">200</span>
+        <span style="position:relative;height:8px"><span style="position:absolute;left:34%;width:22%;top:0;bottom:0;background:#5cba86;border-radius:2px"></span><span style="position:absolute;left:56%;width:3%;top:0;bottom:0;background:#7d9bef;border-radius:2px"></span></span>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 52px 44px 130px;align-items:center;height:26px;padding:0 14px;border-top:1px solid #2a2e35">
+        <span style="display:flex;align-items:center;gap:8px"><span style="width:34px;text-align:center;font:600 8.5px ui-monospace,Menlo,monospace;padding:2.5px 0;border-radius:4px;color:#e08c8c;background:rgba(210,90,90,.14)">IMG</span><span style="font:500 12px -apple-system,system-ui,sans-serif;color:#e07a7a">collect?v=2&amp;tid=UA-37…</span><span style="font:400 11px -apple-system,system-ui,sans-serif;color:#8b93a1">analytics.example.com</span></span>
+        <span style="font:600 11px ui-monospace,Menlo,monospace;color:#7d9bef">GET</span><span style="font:500 11px ui-monospace,Menlo,monospace;color:#e07a7a">404</span>
+        <span style="position:relative;height:8px"><span style="position:absolute;left:50%;width:6%;top:0;bottom:0;background:#e07a7a;border-radius:2px"></span></span>
+      </div>
+      <div style="height:8px"></div>
+    </div>
+    <div class="dv-card" style="flex:1;padding:12px 14px 14px">
+      <div style="font:600 9.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#697180;margin-bottom:9px">SEMANTIC FAMILIES — LIGHT</div>
+      <sc-for list="{{ swatchesA }}" as="sw" hint-placeholder-count="4">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+          <span style="flex:none;width:58px;font:500 10px -apple-system,system-ui,sans-serif;color:#697180">{{ sw.label }}</span>
+          <span style="display:flex;flex-wrap:wrap;gap:5px">
+            <sc-for list="{{ sw.chips }}" as="ch" hint-placeholder-count="5">
+              <span style="display:flex;align-items:center;gap:4px;padding:2px 6px 2px 3px;border:1px solid #eceef1;border-radius:5px"><span style="width:11px;height:11px;border-radius:3px;background:{{ ch.c }}"></span><span style="font:400 9.5px ui-monospace,Menlo,monospace;color:#697180">{{ ch.n }}</span></span>
+            </sc-for>
+          </span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 1b PHOSPHOR ============ -->
+<div class="dv-opt" id="1b">
+  <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a><span><strong>Phosphor</strong> — dark-first terminal instrument. JetBrains Mono for every piece of data, ANSI-tuned semantic hues, bracket badges instead of pills, square waterfall segments on faint gridlines. 28px rows. Ghostty energy.</span></div>
+  <div class="dv-card" style="width:1060px;background:#1a1a16;border-color:rgba(0,0,0,.5)">
+    <div style="display:flex;align-items:center;gap:7px;height:34px;padding:0 14px;background:#15150f;border-bottom:1px solid #2c2b23">
+      <span style="width:11px;height:11px;border-radius:50%;background:#3a3930"></span><span style="width:11px;height:11px;border-radius:50%;background:#3a3930"></span><span style="width:11px;height:11px;border-radius:50%;background:#3a3930"></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 14px;border-bottom:1px solid #2c2b23">
+      <button style="height:26px;padding:0 12px;border:1px solid #3a3930;border-radius:4px;background:#22211a;font:500 11.5px 'JetBrains Mono',monospace;color:#e6e2d6">Open</button>
+      <span style="font:600 12px 'JetBrains Mono',monospace;color:#e6e2d6">github.com.har</span>
+      <span style="white-space:nowrap;font:400 11px 'JetBrains Mono',monospace;color:#8f8a7a">277/277</span>
+      <div style="flex:1;max-width:340px;display:flex;align-items:center;gap:7px;height:27px;padding:0 10px;border:1px solid #3a3930;border-radius:4px;background:#14140e">
+        <span style="font:600 11.5px 'JetBrains Mono',monospace;color:#9ecb43">/</span>
+        <span style="font:400 11.5px 'JetBrains Mono',monospace;color:#6b6759;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">filter — domain: method: status:</span>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:1px;font:500 10.5px 'JetBrains Mono',monospace">
+        <span style="padding:4px 9px;border-radius:4px;background:rgba(158,203,67,.16);color:#b5d96a;box-shadow:inset 0 0 0 1px rgba(158,203,67,.35)">ALL</span>
+        <span style="padding:4px 8px;color:#8f8a7a">XHR</span><span style="padding:4px 8px;color:#8f8a7a">JS</span><span style="padding:4px 8px;color:#8f8a7a">CSS</span><span style="padding:4px 8px;color:#8f8a7a">IMG</span><span style="padding:4px 8px;color:#8f8a7a">FONT</span><span style="padding:4px 8px;color:#8f8a7a">DOC</span><span style="padding:4px 8px;color:#8f8a7a">OTH</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 62px 92px 92px 70px 72px 250px;align-items:center;height:30px;padding:0 14px;border-bottom:1px solid #2c2b23;font:600 10px 'JetBrains Mono',monospace;letter-spacing:.06em;color:#8f8a7a">
+      <span>NAME</span><span>METHOD</span><span>STATUS</span><span>TYPE</span><span style="text-align:right">SIZE</span><span style="text-align:right">TIME</span><span style="padding-left:16px;color:#e6e2d6">WATERFALL <span style="color:#9ecb43">▲</span></span>
+    </div>
+    <div>
+      <sc-for list="{{ rowsB }}" as="r" hint-placeholder-count="11">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 62px 92px 92px 70px 72px 250px;align-items:center;height:28px;padding:0 14px;border-bottom:1px solid #22211a;background:{{ r.bg }};box-shadow:{{ r.inset }}" style-hover="background:#20201a">
+          <span style="display:flex;align-items:center;gap:8px;min-width:0">
+            <span style="flex:none;width:44px;font:500 10px 'JetBrains Mono',monospace;color:{{ r.bc }}">[{{ r.badge }}]</span>
+            <span style="font:500 11.5px 'JetBrains Mono',monospace;color:{{ r.nc }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.n }}</span>
+            <span style="font:400 10.5px 'JetBrains Mono',monospace;color:#6b6759;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.d }}</span>
+          </span>
+          <span style="font:600 10.5px 'JetBrains Mono',monospace;color:{{ r.mc }}">{{ r.m }}</span>
+          <span style="font:500 10.5px 'JetBrains Mono',monospace;color:{{ r.sc }}">{{ r.s }} <span style="color:#6b6759;font-weight:400;font-size:9.5px">{{ r.note }}</span></span>
+          <span style="font:400 10.5px 'JetBrains Mono',monospace;color:#8f8a7a;text-transform:lowercase">{{ r.ty }}</span>
+          <span style="text-align:right;font:400 10.5px 'JetBrains Mono',monospace;color:#8f8a7a">{{ r.sz }}</span>
+          <span style="text-align:right;font:400 10.5px 'JetBrains Mono',monospace;color:#8f8a7a">{{ r.tm }}</span>
+          <span style="position:relative;height:100%;margin-left:16px;background-image:repeating-linear-gradient(to right,#22211a 0,#22211a 1px,transparent 1px,transparent 46.8px)">
+            <sc-for list="{{ r.segs }}" as="g" hint-placeholder-count="2">
+              <span style="position:absolute;top:11px;bottom:11px;left:{{ g.l }}%;width:{{ g.w }}%;background:{{ g.c }}"></span>
+            </sc-for>
+          </span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="overflow:hidden;display:flex;align-items:center;gap:14px;height:32px;padding:0 14px;background:#15150f;border-top:1px solid #2c2b23;font:400 10.5px 'JetBrains Mono',monospace;color:#8f8a7a">
+      <span style="white-space:nowrap"><b style="color:#e6e2d6;font-weight:600">277</b> req</span><span style="color:#3a3930">│</span>
+      <span style="white-space:nowrap"><b style="color:#e6e2d6;font-weight:600">3.2 MB</b> transferred</span><span style="color:#3a3930">│</span>
+      <span style="white-space:nowrap"><b style="color:#e6e2d6;font-weight:600">18.6 MB</b> resources</span><span style="color:#3a3930">│</span>
+      <span style="white-space:nowrap"><b style="color:#e6e2d6;font-weight:600">2.1 min</b> total</span>
+      <span style="margin-left:auto;display:flex;gap:1px">
+        <span style="padding:2px 8px;border-radius:3px;color:#8f8a7a">system</span><span style="padding:2px 8px;color:#8f8a7a">light</span><span style="padding:2px 8px;border-radius:3px;background:rgba(158,203,67,.16);color:#b5d96a">dark</span>
+      </span>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;align-items:flex-start">
+    <div class="dv-card" style="width:560px;background:#f4f2ea">
+      <div style="padding:8px 14px 6px;font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.08em;color:#8a8471">LIGHT</div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 52px 44px 130px;align-items:center;height:28px;padding:0 14px;border-top:1px solid #e3dfd2">
+        <span style="display:flex;align-items:center;gap:8px"><span style="width:44px;font:500 10px 'JetBrains Mono',monospace;color:#8a5fb8">[CSS]</span><span style="font:500 11.5px 'JetBrains Mono',monospace;color:#33321f">light-8810aba6e2.css</span></span>
+        <span style="font:600 10.5px 'JetBrains Mono',monospace;color:#2a7f9e">GET</span><span style="font:500 10.5px 'JetBrains Mono',monospace;color:#57841f">200</span>
+        <span style="position:relative;height:8px"><span style="position:absolute;left:6%;width:5%;top:1px;bottom:1px;background:#2a7f9e"></span><span style="position:absolute;left:11%;width:16%;top:1px;bottom:1px;background:#57841f"></span><span style="position:absolute;left:27%;width:7%;top:1px;bottom:1px;background:#3f6dc4"></span></span>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 52px 44px 130px;align-items:center;height:28px;padding:0 14px;border-top:1px solid #e3dfd2;background:rgba(103,140,30,.1);box-shadow:inset 2px 0 0 #678c1e">
+        <span style="display:flex;align-items:center;gap:8px"><span style="width:44px;font:500 10px 'JetBrains Mono',monospace;color:#2a7f9e">[XHR]</span><span style="font:500 11.5px 'JetBrains Mono',monospace;color:#33321f">payloads.json</span><span style="font:400 10.5px 'JetBrains Mono',monospace;color:#8a8471">github.com</span></span>
+        <span style="font:600 10.5px 'JetBrains Mono',monospace;color:#2a7f9e">GET</span><span style="font:500 10.5px 'JetBrains Mono',monospace;color:#57841f">200</span>
+        <span style="position:relative;height:8px"><span style="position:absolute;left:34%;width:22%;top:1px;bottom:1px;background:#57841f"></span><span style="position:absolute;left:56%;width:3%;top:1px;bottom:1px;background:#3f6dc4"></span></span>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 52px 44px 130px;align-items:center;height:28px;padding:0 14px;border-top:1px solid #e3dfd2">
+        <span style="display:flex;align-items:center;gap:8px"><span style="width:44px;font:500 10px 'JetBrains Mono',monospace;color:#bd4f43">[IMG]</span><span style="font:500 11.5px 'JetBrains Mono',monospace;color:#bd4f43">collect?v=2&amp;tid=UA-37…</span></span>
+        <span style="font:600 10.5px 'JetBrains Mono',monospace;color:#2a7f9e">GET</span><span style="font:500 10.5px 'JetBrains Mono',monospace;color:#bd4f43">404</span>
+        <span style="position:relative;height:8px"><span style="position:absolute;left:50%;width:6%;top:1px;bottom:1px;background:#bd4f43"></span></span>
+      </div>
+      <div style="height:8px"></div>
+    </div>
+    <div class="dv-card" style="flex:1;padding:12px 14px 14px;background:#1a1a16;border-color:rgba(0,0,0,.5)">
+      <div style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.08em;color:#8f8a7a;margin-bottom:9px">SEMANTIC FAMILIES — DARK</div>
+      <sc-for list="{{ swatchesB }}" as="sw" hint-placeholder-count="4">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+          <span style="flex:none;width:58px;font:500 10px 'JetBrains Mono',monospace;color:#8f8a7a">{{ sw.label }}</span>
+          <span style="display:flex;flex-wrap:wrap;gap:5px">
+            <sc-for list="{{ sw.chips }}" as="ch" hint-placeholder-count="5">
+              <span style="display:flex;align-items:center;gap:4px;padding:2px 6px 2px 3px;border:1px solid #2c2b23;border-radius:3px"><span style="width:11px;height:11px;background:{{ ch.c }}"></span><span style="font:400 9.5px 'JetBrains Mono',monospace;color:#8f8a7a">{{ ch.n }}</span></span>
+            </sc-for>
+          </span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 1c LEDGER ============ -->
+<div class="dv-opt" id="1c">
+  <div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a><span><strong>Ledger</strong> — warm paper + ink, Spline Sans / Spline Sans Mono, amber accent. Dot-and-label type markers instead of badges, waterfall bars on a faint total-track. Airier 30px rows, 13px base — the "less dense, more considered" end.</span></div>
+  <div class="dv-card" style="width:1060px;background:#faf8f4">
+    <div style="display:flex;align-items:center;gap:7px;height:34px;padding:0 14px;background:#f3f0e9;border-bottom:1px solid #e9e4da">
+      <span style="width:11px;height:11px;border-radius:50%;background:#d8d2c4"></span><span style="width:11px;height:11px;border-radius:50%;background:#d8d2c4"></span><span style="width:11px;height:11px;border-radius:50%;background:#d8d2c4"></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:13px;height:48px;padding:0 16px;border-bottom:1px solid #e9e4da">
+      <button style="height:28px;padding:0 13px;border:1px solid #ddd6c8;border-radius:7px;background:#fffefb;font:500 12.5px 'Spline Sans',sans-serif;color:#2a2620;box-shadow:0 1px 1px rgba(60,50,30,.05)">Open</button>
+      <span style="font:600 13px 'Spline Sans',sans-serif;color:#2a2620">github.com.har</span>
+      <span style="white-space:nowrap;font:400 11.5px 'Spline Sans Mono',monospace;color:#7a7263">277 of 277</span>
+      <div style="flex:1;max-width:350px;display:flex;align-items:center;gap:8px;height:29px;padding:0 11px;border:1px solid #ddd6c8;border-radius:7px;background:#fffefb">
+        <span style="width:11px;height:11px;border:1.6px solid #a89e8a;border-radius:50%;position:relative;flex:none"><span style="position:absolute;width:5px;height:1.6px;background:#a89e8a;transform:rotate(45deg);left:9px;top:10px"></span></span>
+        <span style="font:400 12.5px 'Spline Sans',sans-serif;color:#a89e8a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Filter requests…</span>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:3px;font:500 11.5px 'Spline Sans',sans-serif">
+        <span style="padding:4px 11px;border-radius:999px;background:#2a2620;color:#faf8f4">All</span>
+        <span style="padding:4px 9px;border-radius:999px;color:#7a7263">XHR</span><span style="padding:4px 9px;border-radius:999px;color:#7a7263">JS</span><span style="padding:4px 9px;border-radius:999px;color:#7a7263">CSS</span><span style="padding:4px 9px;border-radius:999px;color:#7a7263">Img</span><span style="padding:4px 9px;border-radius:999px;color:#7a7263">Font</span><span style="padding:4px 9px;border-radius:999px;color:#7a7263">Doc</span><span style="padding:4px 9px;border-radius:999px;color:#7a7263">Other</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 62px 96px 96px 70px 72px 240px;align-items:center;height:30px;padding:0 16px;border-bottom:1px solid #e9e4da;font:600 11px 'Spline Sans',sans-serif;color:#7a7263">
+      <span>Name</span><span>Method</span><span>Status</span><span>Type</span><span style="text-align:right">Size</span><span style="text-align:right">Time</span><span style="padding-left:16px;color:#2a2620">Waterfall <span style="color:#b06f24">▲</span></span>
+    </div>
+    <div style="background:#fffefb">
+      <sc-for list="{{ rowsC }}" as="r" hint-placeholder-count="11">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 62px 96px 96px 70px 72px 240px;align-items:center;height:30px;padding:0 16px;border-bottom:1px solid #f2eee6;background:{{ r.bg }};box-shadow:{{ r.inset }}" style-hover="background:#f6f3ec">
+          <span style="display:flex;align-items:center;gap:9px;min-width:0">
+            <span style="flex:none;display:flex;align-items:center;gap:5px;width:44px"><span style="width:7px;height:7px;border-radius:50%;background:{{ r.bc }}"></span><span style="font:600 9px 'Spline Sans Mono',monospace;letter-spacing:.07em;color:{{ r.bc }}">{{ r.badge }}</span></span>
+            <span style="font:500 12.5px 'Spline Sans',sans-serif;color:{{ r.nc }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.n }}</span>
+            <span style="font:400 11.5px 'Spline Sans',sans-serif;color:#a89e8a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.d }}</span>
+          </span>
+          <span style="font:600 11px 'Spline Sans Mono',monospace;color:{{ r.mc }}">{{ r.m }}</span>
+          <span style="font:500 11px 'Spline Sans Mono',monospace;color:{{ r.sc }}">{{ r.s }} <span style="font:italic 400 10.5px 'Spline Sans',sans-serif;color:#a89e8a">{{ r.note }}</span></span>
+          <span style="font:400 11.5px 'Spline Sans',sans-serif;color:#7a7263">{{ r.ty }}</span>
+          <span style="text-align:right;font:400 11px 'Spline Sans Mono',monospace;color:#7a7263">{{ r.sz }}</span>
+          <span style="text-align:right;font:400 11px 'Spline Sans Mono',monospace;color:#7a7263">{{ r.tm }}</span>
+          <span style="position:relative;height:10px;margin-left:16px">
+            <span style="position:absolute;left:0;right:0;top:4px;height:2px;background:#efeadf;border-radius:1px"></span>
+            <sc-for list="{{ r.segs }}" as="g" hint-placeholder-count="2">
+              <span style="position:absolute;top:0;bottom:0;left:{{ g.l }}%;width:{{ g.w }}%;background:{{ g.c }};border-radius:3px"></span>
+            </sc-for>
+          </span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="overflow:hidden;display:flex;align-items:center;gap:15px;height:34px;padding:0 16px;background:#faf8f4;border-top:1px solid #e9e4da;font:400 11.5px 'Spline Sans',sans-serif;color:#7a7263">
+      <span style="white-space:nowrap"><b style="color:#2a2620;font-weight:600">277</b> requests</span><span style="width:1px;height:12px;background:#ddd6c8"></span>
+      <span style="white-space:nowrap"><b style="color:#2a2620;font-weight:600">3.2 MB</b> transferred</span><span style="width:1px;height:12px;background:#ddd6c8"></span>
+      <span style="white-space:nowrap"><b style="color:#2a2620;font-weight:600">18.6 MB</b> resources</span><span style="width:1px;height:12px;background:#ddd6c8"></span>
+      <span style="white-space:nowrap"><b style="color:#2a2620;font-weight:600">2.1 min</b> total</span>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:2px;padding:2px;background:#efeadf;border-radius:999px;font:500 11px 'Spline Sans',sans-serif">
+        <span style="padding:2px 10px;border-radius:999px;background:#fffefb;color:#2a2620;box-shadow:0 1px 1px rgba(60,50,30,.08)">System</span><span style="padding:2px 10px;color:#7a7263">Light</span><span style="padding:2px 10px;color:#7a7263">Dark</span>
+      </span>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;align-items:flex-start">
+    <div class="dv-card" style="width:560px;background:#1e1b16;border-color:rgba(0,0,0,.45)">
+      <div style="padding:8px 16px 6px;font:600 9.5px 'Spline Sans Mono',monospace;letter-spacing:.08em;color:#968c78">DARK</div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 52px 44px 130px;align-items:center;height:30px;padding:0 16px;border-top:1px solid #322d24">
+        <span style="display:flex;align-items:center;gap:9px"><span style="display:flex;align-items:center;gap:5px;width:44px"><span style="width:7px;height:7px;border-radius:50%;background:#b18ee0"></span><span style="font:600 9px 'Spline Sans Mono',monospace;letter-spacing:.07em;color:#b18ee0">CSS</span></span><span style="font:500 12.5px 'Spline Sans',sans-serif;color:#ece7dc">light-8810aba6e2.css</span></span>
+        <span style="font:600 11px 'Spline Sans Mono',monospace;color:#8ba7d8">GET</span><span style="font:500 11px 'Spline Sans Mono',monospace;color:#84b98a">200</span>
+        <span style="position:relative;height:10px"><span style="position:absolute;left:0;right:0;top:4px;height:2px;background:#322d24"></span><span style="position:absolute;left:6%;width:5%;top:0;bottom:0;background:#79bdc4;border-radius:3px"></span><span style="position:absolute;left:11%;width:16%;top:0;bottom:0;background:#84b98a;border-radius:3px"></span><span style="position:absolute;left:27%;width:7%;top:0;bottom:0;background:#8ba7d8;border-radius:3px"></span></span>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 52px 44px 130px;align-items:center;height:30px;padding:0 16px;border-top:1px solid #322d24;background:rgba(214,150,64,.12);box-shadow:inset 2px 0 0 #d69640">
+        <span style="display:flex;align-items:center;gap:9px"><span style="display:flex;align-items:center;gap:5px;width:44px"><span style="width:7px;height:7px;border-radius:50%;background:#79bdc4"></span><span style="font:600 9px 'Spline Sans Mono',monospace;letter-spacing:.07em;color:#79bdc4">XHR</span></span><span style="font:500 12.5px 'Spline Sans',sans-serif;color:#ece7dc">payloads.json</span><span style="font:400 11.5px 'Spline Sans',sans-serif;color:#968c78">github.com</span></span>
+        <span style="font:600 11px 'Spline Sans Mono',monospace;color:#8ba7d8">GET</span><span style="font:500 11px 'Spline Sans Mono',monospace;color:#84b98a">200</span>
+        <span style="position:relative;height:10px"><span style="position:absolute;left:0;right:0;top:4px;height:2px;background:#322d24"></span><span style="position:absolute;left:34%;width:22%;top:0;bottom:0;background:#84b98a;border-radius:3px"></span><span style="position:absolute;left:56%;width:3%;top:0;bottom:0;background:#8ba7d8;border-radius:3px"></span></span>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 52px 44px 130px;align-items:center;height:30px;padding:0 16px;border-top:1px solid #322d24">
+        <span style="display:flex;align-items:center;gap:9px"><span style="display:flex;align-items:center;gap:5px;width:44px"><span style="width:7px;height:7px;border-radius:50%;background:#d98a80"></span><span style="font:600 9px 'Spline Sans Mono',monospace;letter-spacing:.07em;color:#d98a80">IMG</span></span><span style="font:500 12.5px 'Spline Sans',sans-serif;color:#d98a80">collect?v=2&amp;tid=UA-37…</span></span>
+        <span style="font:600 11px 'Spline Sans Mono',monospace;color:#8ba7d8">GET</span><span style="font:500 11px 'Spline Sans Mono',monospace;color:#d98a80">404</span>
+        <span style="position:relative;height:10px"><span style="position:absolute;left:0;right:0;top:4px;height:2px;background:#322d24"></span><span style="position:absolute;left:50%;width:6%;top:0;bottom:0;background:#d98a80;border-radius:3px"></span></span>
+      </div>
+      <div style="height:8px"></div>
+    </div>
+    <div class="dv-card" style="flex:1;padding:12px 16px 14px;background:#fffefb">
+      <div style="font:600 9.5px 'Spline Sans Mono',monospace;letter-spacing:.08em;color:#7a7263;margin-bottom:9px">SEMANTIC FAMILIES — LIGHT</div>
+      <sc-for list="{{ swatchesC }}" as="sw" hint-placeholder-count="4">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+          <span style="flex:none;width:58px;font:500 10px 'Spline Sans',sans-serif;color:#7a7263">{{ sw.label }}</span>
+          <span style="display:flex;flex-wrap:wrap;gap:5px">
+            <sc-for list="{{ sw.chips }}" as="ch" hint-placeholder-count="5">
+              <span style="display:flex;align-items:center;gap:4px;padding:2px 6px 2px 3px;border:1px solid #efeadf;border-radius:6px"><span style="width:11px;height:11px;border-radius:50%;background:{{ ch.c }}"></span><span style="font:400 9.5px 'Spline Sans Mono',monospace;color:#7a7263">{{ ch.n }}</span></span>
+            </sc-for>
+          </span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "build out all surfaces in <a class="dv-oid" href="#1a">1a</a>" · "<a class="dv-oid" href="#1b">1b</a> but light-first" · "mix <a class="dv-oid" href="#1c">1c</a>'s warmth with <a class="dv-oid" href="#1a">1a</a>'s badges" · "new directions"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  base() {
+    return [
+      {t:'doc', n:'explore', d:'github.com', m:'GET', s:'200', ty:'document', sz:'12.4 kB', tm:'1.44 s', st:.005, ph:[['blocked',.012],['send',.006],['wait',.42],['receive',.09]]},
+      {t:'css', n:'light-8810aba6e224dcba.css', d:'github.githubassets.com', m:'GET', s:'200', ty:'stylesheet', sz:'41.9 kB', tm:'329 ms', st:.08, ph:[['dns',.014],['connect',.02],['ssl',.014],['wait',.06],['receive',.032]]},
+      {t:'css', n:'primer-primitives-ef1311e26457f1ec.css', d:'github.githubassets.com', m:'GET', s:'200', ty:'stylesheet', sz:'18.2 kB', tm:'337 ms', st:.09, ph:[['blocked',.01],['wait',.1],['receive',.03]]},
+      {t:'js', n:'wp-runtime-fac727b98ab2c42c.js', d:'github.githubassets.com', m:'GET', s:'200', ty:'script', sz:'38.7 kB', tm:'438 ms', st:.13, ph:[['blocked',.014],['wait',.12],['receive',.045]]},
+      {t:'js', n:'react-core-a9e41ab509709e15.js', d:'github.githubassets.com', m:'GET', s:'200', ty:'script', sz:'129 kB', tm:'415 ms', st:.15, ph:[['blocked',.01],['wait',.1],['receive',.06]]},
+      {t:'xhr', n:'payloads.json', d:'github.com', m:'GET', s:'200', ty:'xhr', sz:'303 B', tm:'207 ms', st:.32, sel:true, ph:[['blocked',.008],['send',.004],['wait',.075],['receive',.006]]},
+      {t:'img', n:'229118', d:'avatars.githubusercontent.com', m:'GET', s:'200', ty:'image', sz:'8.1 kB', tm:'234 ms', st:.37, ph:[['blocked',.01],['wait',.06],['receive',.025]]},
+      {t:'font', n:'mona-sans-v10.woff2', d:'github.githubassets.com', m:'GET', s:'200', ty:'font', sz:'92.4 kB', tm:'12 ms', st:.41, cache:true, ph:[['receive',.012]]},
+      {t:'xhr', n:'GenerateIT', d:'jnn-pa.googleapis.com', m:'POST', s:'200', ty:'xhr', sz:'1.2 kB', tm:'539 ms', st:.47, ph:[['blocked',.018],['dns',.012],['connect',.02],['send',.008],['wait',.14],['receive',.02]]},
+      {t:'img', n:'collect?v=2&tid=UA-376961', d:'analytics.example.com', m:'GET', s:'404', ty:'image', sz:'0 B', tm:'88 ms', st:.56, err:true, ph:[['blocked',.012],['wait',.028]]},
+      {t:'js', n:'element-registry-9e799b115dbe41ba.js', d:'github.githubassets.com', m:'GET', s:'200', ty:'script', sz:'21.5 kB', tm:'402 ms', st:.62, ph:[['blocked',.01],['wait',.1],['receive',.035]]}
+    ];
+  }
+
+  buildRows(theme) {
+    return this.base().map(r => {
+      let acc = r.st;
+      const segs = r.ph.map(([phase, w]) => {
+        const seg = { l: +(acc * 100).toFixed(2), w: Math.max(+(w * 100).toFixed(2), 0.5), c: theme.phases[phase] };
+        acc += w;
+        return seg;
+      });
+      const err = !!r.err;
+      return {
+        badge: theme.badgeMap[r.t], bc: theme.types[r.t], bbg: theme.typeBgs ? theme.typeBgs[r.t] : 'transparent',
+        n: r.n, d: r.d,
+        nc: err ? theme.errText : theme.text,
+        m: r.m, mc: theme.methods[r.m] || theme.muted,
+        s: r.s, sc: err ? theme.errText : theme.statusOk,
+        note: r.cache ? '(disk cache)' : '',
+        ty: r.ty, sz: r.sz, tm: r.tm,
+        bg: r.sel ? theme.selBg : (err ? theme.errBg : 'transparent'),
+        inset: r.sel ? ('inset 2px 0 0 ' + theme.accent) : 'none',
+        segs
+      };
+    });
+  }
+
+  swatches(theme) {
+    const pick = (obj, names) => names.map(n => ({ n, c: obj[n] }));
+    return [
+      { label: 'Status', chips: [{n:'2xx',c:theme.statusOk},{n:'3xx',c:theme.status3},{n:'4xx',c:theme.status4},{n:'5xx',c:theme.status5}] },
+      { label: 'Method', chips: pick(theme.methods, ['GET','POST','PUT','DELETE','PATCH']) },
+      { label: 'Timing', chips: pick(theme.phases, ['blocked','dns','connect','ssl','send','wait','receive']) },
+      { label: 'Type', chips: pick(theme.types, ['doc','css','js','img','font','xhr']) }
+    ];
+  }
+
+  renderVals() {
+    // 1a Instrument — cool graphite, light
+    const A = {
+      text:'#1d2129', muted:'#697180', accent:'#4058d3',
+      selBg:'rgba(64,88,211,.07)', errBg:'rgba(194,69,69,.05)', errText:'#c24545',
+      statusOk:'#2c8a5b', status3:'#b07816', status4:'#c24545', status5:'#8f2e2e',
+      methods:{GET:'#3f63c8',POST:'#2c8a5b',PUT:'#b07816',DELETE:'#c24545',PATCH:'#7952c1'},
+      phases:{blocked:'#aeb4bd',queueing:'#aeb4bd',dns:'#2f96a1',connect:'#c98d2a',ssl:'#8a63d2',send:'#7c9cec',wait:'#3fa06a',receive:'#4058d3'},
+      types:{doc:'#3f63c8',css:'#7952c1',js:'#b07816',img:'#2c8a5b',font:'#b04a8f',xhr:'#12808a',other:'#697180'},
+      typeBgs:{doc:'rgba(63,99,200,.1)',css:'rgba(121,82,193,.1)',js:'rgba(176,120,22,.1)',img:'rgba(44,138,91,.1)',font:'rgba(176,74,143,.1)',xhr:'rgba(18,128,138,.1)',other:'rgba(105,113,128,.1)'},
+      badgeMap:{doc:'DOC',css:'CSS',js:'JS',img:'IMG',font:'FONT',xhr:'XHR'}
+    };
+    // 1b Phosphor — dark terminal
+    const B = {
+      text:'#e6e2d6', muted:'#8f8a7a', accent:'#9ecb43',
+      selBg:'rgba(158,203,67,.1)', errBg:'rgba(224,108,117,.07)', errText:'#e06c75',
+      statusOk:'#98c379', status3:'#e5c07b', status4:'#e06c75', status5:'#d14b56',
+      methods:{GET:'#56b6c2',POST:'#98c379',PUT:'#e5c07b',DELETE:'#e06c75',PATCH:'#c678dd'},
+      phases:{blocked:'#5c6370',queueing:'#5c6370',dns:'#56b6c2',connect:'#e5c07b',ssl:'#c678dd',send:'#61afef',wait:'#98c379',receive:'#61afef'},
+      types:{doc:'#61afef',css:'#c678dd',js:'#e5c07b',img:'#98c379',font:'#e06c75',xhr:'#56b6c2',other:'#8f8a7a'},
+      badgeMap:{doc:'DOC',css:'CSS',js:'JS.',img:'IMG',font:'FNT',xhr:'XHR'}
+    };
+    B.buildInset = true;
+    // 1c Ledger — warm paper
+    const C = {
+      text:'#2a2620', muted:'#7a7263', accent:'#b06f24',
+      selBg:'rgba(176,111,36,.08)', errBg:'rgba(178,74,64,.05)', errText:'#b24a40',
+      statusOk:'#43825a', status3:'#a4761f', status4:'#b24a40', status5:'#8c3229',
+      methods:{GET:'#4a6fa1',POST:'#43825a',PUT:'#a4761f',DELETE:'#b24a40',PATCH:'#7d5aa6'},
+      phases:{blocked:'#b6ad9b',queueing:'#b6ad9b',dns:'#3d8b93',connect:'#c08a33',ssl:'#7d5aa6',send:'#7590c4',wait:'#5c9c6e',receive:'#4a6fa1'},
+      types:{doc:'#4a6fa1',css:'#7d5aa6',js:'#a4761f',img:'#43825a',font:'#a8527d',xhr:'#3d8b93',other:'#7a7263'},
+      badgeMap:{doc:'DOC',css:'CSS',js:'JS',img:'IMG',font:'FONT',xhr:'XHR'}
+    };
+    // 1b selected-row inset uses accent
+    const rowsB = this.buildRows(B).map(r => r.inset !== 'none' ? Object.assign({}, r, {inset:'inset 2px 0 0 #9ecb43'}) : r);
+
+    // ---- Turn 2: Instrument dark theme ----
+    const AD = {
+      text:'#e4e6ea', muted:'#8b93a1', accent:'#6d86e7',
+      selBg:'rgba(109,134,231,.13)', errBg:'rgba(224,122,122,.07)', errText:'#e07a7a',
+      statusOk:'#5cba86', status3:'#d3a04a', status4:'#e07a7a', status5:'#d65c5c',
+      methods:{GET:'#7d9bef',POST:'#5cba86',PUT:'#d3a04a',DELETE:'#e07a7a',PATCH:'#a88ae0'},
+      phases:{blocked:'#596273',queueing:'#596273',dns:'#4fb0ba',connect:'#d3a04a',ssl:'#a88ae0',send:'#8fa9ee',wait:'#55b07c',receive:'#7d9bef'},
+      types:{doc:'#7d9bef',css:'#b7a4ec',js:'#d3a04a',img:'#5cba86',font:'#d883b8',xhr:'#6fc7d1',other:'#8b93a1'},
+      typeBgs:{doc:'rgba(125,155,239,.14)',css:'rgba(150,120,230,.16)',js:'rgba(211,160,74,.14)',img:'rgba(92,186,134,.14)',font:'rgba(216,131,184,.14)',xhr:'rgba(60,170,185,.16)',other:'rgba(139,147,161,.14)'},
+      badgeMap:{doc:'DOC',css:'CSS',js:'JS',img:'IMG',font:'FONT',xhr:'XHR'}
+    };
+    const rowsAD = this.buildRows(AD).map(r => r.inset !== 'none' ? Object.assign({}, r, {inset:'inset 2px 0 0 #6d86e7'}) : r);
+
+    // XHR rows for the split (detail-open) view
+    const splitBase = [
+      {n:'manifest.json', tm:'124 ms'}, {n:'payloads.json', tm:'185 ms'}, {n:'entitlement', tm:'199 ms'},
+      {n:'chat', tm:'269 ms'}, {n:'payloads.json', tm:'207 ms', sel:true}, {n:'indicator', tm:'166 ms'},
+      {n:'payloads.json', tm:'150 ms'}, {n:'payloads.json', tm:'148 ms'}, {n:'user.json', tm:'159 ms'},
+      {n:'organization-new-tasks-indicator.json', tm:'133 ms'}, {n:'enterprise-new-tasks-indicator.json', tm:'140 ms'},
+      {n:'GenerateIT', d:'jnn-pa.googleapis.com', m:'POST', tm:'539 ms'}
+    ];
+    const rowsSplit = splitBase.map(r => ({
+      n: r.n, d: r.d || 'github.com', m: r.m || 'GET', mc: A.methods[r.m || 'GET'],
+      tm: r.tm, bc: A.types.xhr, bbg: A.typeBgs.xhr,
+      bg: r.sel ? A.selBg : 'transparent',
+      inset: r.sel ? 'inset 2px 0 0 ' + A.accent : 'none'
+    }));
+
+    // Timing tab phases
+    const timing = [
+      {label:'Queueing', c:'#aeb4bd', l:0, w:0.6, v:'1 ms'},
+      {label:'Stalled', c:'#aeb4bd', l:0.6, w:1.2, v:'2 ms'},
+      {label:'Send', c:'#7c9cec', l:1.8, w:0.6, v:'< 1 ms'},
+      {label:'Wait (TTFB)', c:'#3fa06a', l:2.4, w:95.5, v:'203 ms'},
+      {label:'Receive', c:'#4058d3', l:97.9, w:0.8, v:'< 1 ms'}
+    ];
+    const rawTiming = [
+      ['blocked','3 ms'],['dns','–'],['ssl','–'],['connect','–'],['send','< 1 ms'],['wait','203 ms'],
+      ['receive','< 1 ms'],['_blocked_queueing','1 ms'],['_blocked_proxy','1 ms']
+    ];
+
+    // Autocomplete suggestions
+    const acKeys = [{k:'domain:', hint:'filter by host'}, {k:'method:', hint:'GET, POST, …'}, {k:'status:', hint:'code or class'}, {k:'type:', hint:'content type'}];
+    const acVals = ['github.com', 'github.githubassets.com', 'avatars.githubusercontent.com', 'jnn-pa.googleapis.com'];
+
+    // Token spec
+    const tokenGroups = [
+      {group:'Core', items:[
+        ['--ns-bg','#f7f8fa','#17191d'],['--ns-surface','#ffffff','#1d2025'],['--ns-surface-raised','#fbfcfd','#22262c'],
+        ['--ns-hairline','#e6e8ec','#2a2e35'],['--ns-hairline-soft','#f1f2f5','#22262c'],
+        ['--ns-text','#1d2129','#e4e6ea'],['--ns-text-muted','#697180','#8b93a1'],['--ns-text-faint','#9aa1ad','#667080'],
+        ['--ns-accent','#4058d3','#6d86e7'],['--ns-accent-tint','rgba(64,88,211,.07)','rgba(109,134,231,.13)'],
+        ['--ns-focus-ring','rgba(64,88,211,.35)','rgba(109,134,231,.45)'],['--ns-error-tint','rgba(194,69,69,.05)','rgba(224,122,122,.07)']
+      ]},
+      {group:'Status', items:[
+        ['--ns-status-2xx','#2c8a5b','#5cba86'],['--ns-status-3xx','#b07816','#d3a04a'],
+        ['--ns-status-4xx','#c24545','#e07a7a'],['--ns-status-5xx','#8f2e2e','#d65c5c']
+      ]},
+      {group:'Method', items:[
+        ['--ns-method-get','#3f63c8','#7d9bef'],['--ns-method-post','#2c8a5b','#5cba86'],['--ns-method-put','#b07816','#d3a04a'],
+        ['--ns-method-delete','#c24545','#e07a7a'],['--ns-method-patch','#7952c1','#a88ae0']
+      ]},
+      {group:'Timing phases', items:[
+        ['--ns-phase-blocked','#aeb4bd','#596273'],['--ns-phase-dns','#2f96a1','#4fb0ba'],['--ns-phase-connect','#c98d2a','#d3a04a'],
+        ['--ns-phase-ssl','#8a63d2','#a88ae0'],['--ns-phase-send','#7c9cec','#8fa9ee'],['--ns-phase-wait','#3fa06a','#55b07c'],
+        ['--ns-phase-receive','#4058d3','#7d9bef']
+      ]},
+      {group:'Content type', items:[
+        ['--ns-type-doc','#3f63c8','#7d9bef'],['--ns-type-css','#7952c1','#b7a4ec'],['--ns-type-js','#b07816','#d3a04a'],
+        ['--ns-type-img','#2c8a5b','#5cba86'],['--ns-type-font','#b04a8f','#d883b8'],['--ns-type-xhr','#12808a','#6fc7d1'],
+        ['--ns-type-other','#697180','#8b93a1']
+      ]}
+    ].map(g => ({group:g.group, items:g.items.map(([name,l,d]) => ({name, l, d}))}));
+
+    return {
+      rowsA: this.buildRows(A),
+      rowsB,
+      rowsC: this.buildRows(C),
+      rowsAD, rowsSplit, timing, rawTiming, acKeys, acVals, tokenGroups,
+      swatchesA: this.swatches(A),
+      swatchesB: this.swatches(B),
+      swatchesC: this.swatches(C)
+    };
+  }
+}
+</script>
+</body>
+</html>

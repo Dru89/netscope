@@ -19,8 +19,10 @@ Read these three companion documents first — they are the spec:
 - [`05-my-observations-and-suggestions.md`](05-my-observations-and-suggestions.md) — known
   bugs, stale docs, and my own improvement ideas (clearly separated from current behavior).
 
-Plus the visual design coming from Claude Design (a new token set + redesigned component
-treatments). Implement that as the app's look; where it's silent, fall back to the current UI.
+And the visual redesign, delivered by Claude Design, lives in
+[`claude design handoff/`](claude%20design%20handoff/). Implement it as the app's new look;
+where it's silent, fall back to sensible defaults consistent with its system. See
+[**Implementing the redesign**](#implementing-the-redesign) below for exactly how to consume it.
 
 ## Decision: continue the Tauri migration — do not start from scratch
 
@@ -101,6 +103,44 @@ The last uncommitted change on `nightly` is Wayland window-position handling in
 `src-tauri/src/lib.rs` — that's the tar pit that stalled the migration. Decide deliberately how
 much to invest there (my take is in the suggestions doc: don't let pixel-perfect Linux cascade
 block the release; a good-enough default is fine).
+
+## Implementing the redesign
+
+The design lives in [`claude design handoff/`](claude%20design%20handoff/):
+
+- **`netscope-tokens.css`** and **`REDESIGN.md`** are the **source of truth.** The tokens file
+  is a complete, portable custom-property set (light / dark / system, with the no-flash
+  pattern already handled); `REDESIGN.md` is the per-component spec ("Instrument" direction).
+  Everything else is reference.
+- **`mockup/Netscope Directions.dc.html`** is the visual reference — Turn 2 shows every surface
+  in the chosen direction, Turn 3 the Response tab, Turn 1 the three explored directions. It's a
+  Claude "design compositions" file that needs `mockup/support.js` and (for its own doc chrome)
+  Google Fonts to render fully. **Read it as a picture of the target, not as code to lift.**
+
+Integration notes — these are the seams between the design and the current app, so wire them
+deliberately:
+
+- **Adopt the new token names.** The redesign renames everything to `--ns-*`; the current app
+  uses `--color-*`. Migrate to the `--ns-*` set (drop-in `netscope-tokens.css`) rather than
+  leaving two token systems side by side. Every on-screen color must be a token — no literals.
+- **Theme via a root `data-theme` attribute.** The tokens file expects `data-theme="light"` /
+  `"dark"` on the root for explicit choices, and *no* attribute for System (it falls back to
+  `prefers-color-scheme`). Wire the summary-bar theme toggle to set/remove that attribute, and
+  set it before first paint for an explicit choice so there's no flash. (This can replace the
+  current native `setTheme` round-trip, or complement it — your call, but `data-theme` is what
+  the CSS keys off.)
+- **macOS traffic-light inset.** The design uses `--ns-inset-macos: 52px`, applied only on
+  macOS. You'll need a platform signal on the root in the Tauri build (the Electron preload set
+  `data-platform`; Tauri needs an equivalent — set it from `@tauri-apps/plugin-os` / the OS type
+  at startup).
+- **Keep system fonts — do not add a webfont dependency.** The token file specifies
+  `-apple-system` UI and `ui-monospace` data fonts, and the mockup's actual app surfaces use
+  those. The Spline Sans / JetBrains Mono webfonts are only the design-doc's own chrome. A
+  local-first offline app shouldn't fetch fonts over the network (it also complicates CSP), so
+  stay on the system stacks the tokens define.
+- **Behavior is out of scope for the design, not for you.** `REDESIGN.md` restyles surfaces
+  only; it deliberately doesn't touch window management, filtering, shortcuts, or the update
+  flow. Those still come from the parity checklist and the philosophy doc.
 
 ## Improve, don't just port — explicit invitation
 
