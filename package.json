@@ -20,7 +20,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:e2e": "vitest run --config test/e2e/vitest.config.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.0",
@@ -37,6 +38,7 @@
     "prettier-plugin-astro": "^0.14.1",
     "typescript": "^6.0.2",
     "vite": "^5.4.21",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "webdriverio": "^9.29.1"
   }
 }

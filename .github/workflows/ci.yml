@@ -42,3 +42,36 @@ jobs:
       - run: npm run build:vite
       - run: cargo test --manifest-path src-tauri/Cargo.toml
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+
+  # Drives the real release binary through tauri-driver (WebDriver over
+  # WebKitWebDriver). Linux-only: tauri-driver has no macOS support, and the
+  # Windows setup (msedgedriver) is future work.
+  e2e:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev \
+            webkit2gtk-driver xvfb
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          cache-all-crates: true
+      - name: Install tauri-driver
+        run: cargo install tauri-driver --locked
+      - run: npm ci
+      - name: Build app binary
+        run: npx tauri build --no-bundle
+      - name: Run E2E tests
+        run: xvfb-run --auto-servernum npm run test:e2e

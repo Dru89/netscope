@@ -4,7 +4,7 @@
 
 # Netscope
 
-A desktop application for viewing and analyzing HTTP Archive (HAR) files. Available for macOS, Windows, and Linux. Built with Electron, React, and TypeScript.
+A native desktop application for viewing and analyzing HTTP Archive (HAR) files. Available for macOS, Windows, and Linux. Built with Tauri, React, and TypeScript.
 
 **[netscopeapp.com](https://netscopeapp.com)**
 
@@ -80,7 +80,7 @@ Download the `.exe` installer and run it. Windows builds are unsigned, so you ma
 
 ### Linux
 
-Download the `.AppImage` or `.deb` from the Releases page.
+Download the `.AppImage`, `.deb`, or `.pkg.tar.zst` from the Releases page.
 
 For the AppImage, make it executable and run it:
 
@@ -92,12 +92,19 @@ chmod +x Netscope-*.AppImage
 For Debian/Ubuntu, install the `.deb` directly:
 
 ```bash
-sudo dpkg -i netscope_*.deb
+sudo dpkg -i Netscope_*.deb
+```
+
+For Arch (which doesn't ship the FUSE 2 runtime AppImages need), install
+the pacman package:
+
+```bash
+sudo pacman -U netscope-*.pkg.tar.zst
 ```
 
 ## Development
 
-Built with Electron, React, TypeScript, and Vite. See [docs/development.md](docs/development.md) for setup instructions, scripts, and the release process.
+Built with Tauri (Rust), React, TypeScript, and Vite. See [docs/development.md](docs/development.md) for setup instructions, scripts, and the release process.
 
 ## License
 

@@ -2,65 +2,97 @@
 
 ## Getting started
 
+Prerequisites: Node 24+, a Rust toolchain (stable), and Tauri's platform
+dependencies (on Debian/Ubuntu: `libwebkit2gtk-4.1-dev build-essential
+libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev`; macOS
+needs Xcode command line tools; Windows needs the MSVC build tools and
+WebView2).
+
 ```bash
 # Install dependencies
 npm install
 
-# Run in development mode (hot reload)
+# Run the app in development mode (Vite dev server + Tauri shell, hot reload)
 npm run dev
 
-# Type-check and bundle (no packaging)
+# Renderer only, in a browser (no native shell; load a fixture via
+# http://localhost:5173/?fixture=/test/fixtures/www.example.com.har)
+npm run dev:renderer
+
+# Type-check and bundle the renderer
 npm run build:vite
 
-# Build the packaged app for your platform (unsigned)
+# Build the packaged app for your platform
 npm run build
 
 # Run tests
 npm test
+cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
 ## Scripts
 
-| Script               | Description                                                   |
-| -------------------- | ------------------------------------------------------------- |
-| `npm run dev`        | Start Vite dev server + Electron with hot reload              |
-| `npm run build`      | Type-check, bundle, and package the app with electron-builder |
-| `npm run build:vite` | Type-check and bundle only (no electron-builder packaging)    |
-| `npm test`           | Run tests with Vitest                                         |
+| Script                 | Description                                              |
+| ---------------------- | -------------------------------------------------------- |
+| `npm run dev`          | Tauri dev: Vite dev server + Rust shell with hot reload  |
+| `npm run dev:renderer` | Vite dev server only (renderer in a browser)             |
+| `npm run build`        | Full production build + bundles (`tauri build`)          |
+| `npm run build:vite`   | Type-check and bundle the renderer only                  |
+| `npm test`             | Renderer unit tests (Vitest)                             |
+| `npm run test:e2e`     | WebDriver E2E against the release binary (Linux)         |
+
+`make` targets wrap these plus `make icons`, `make release`, and
+`make test-e2e` — see the Makefile.
+
+Production builds with the updater enabled need
+`TAURI_SIGNING_PRIVATE_KEY` (and `_PASSWORD`) in the environment.
+Without them, use `npx tauri build --no-bundle` for a bare binary.
 
 ## Tech stack
 
-- **Electron 28** -- Cross-platform desktop runtime
-- **React 18** -- UI framework
-- **TypeScript 5** -- Type safety
-- **Vite 5** -- Build tooling and dev server
-- **electron-builder** -- Packaging and distribution
+- **Tauri 2** — Rust shell + system webview (WebKit on macOS/Linux, WebView2 on Windows)
+- **React 19** — UI framework
+- **TypeScript** — renderer type safety
+- **Vite 5** — build tooling and dev server
+- **Vitest** — unit tests; **webdriverio + tauri-driver** — E2E
 
 ## Release process
 
-Releases are built and published by GitHub Actions (`.github/workflows/release.yml`). Pushing a version tag triggers the workflow, which runs tests, builds for macOS, Windows, and Linux in parallel, and uploads all artifacts to a GitHub Release. macOS builds are code-signed and notarized when the required secrets are configured.
+Releases are built and published by GitHub Actions
+(`.github/workflows/release.yml`). Pushing a version tag triggers the
+workflow: tests, then a macOS/Windows/Linux matrix via `tauri-action`.
+macOS builds are a signed + notarized universal binary (with a codesign
+verification step); Windows ships an unsigned NSIS installer; Linux gets
+AppImage, deb, and a pacman package wrapped from the deb
+(`scripts/build-pacman.sh`). The updater manifest (`latest.json`) is
+merged across platforms onto the release.
 
-To release a new version:
+To release: `make release` (bumps `package.json` — the single version
+source, `tauri.conf.json` reads it — commits, tags, pushes).
 
-1. Bump `version` in `package.json` and run `npm install --package-lock-only`
-2. Commit: `git commit -am "Bump version to X.Y.Z"`
-3. Tag: `git tag vX.Y.Z`
-4. Push: `git push origin main && git push origin vX.Y.Z`
+Nightlies (`.github/workflows/nightly.yml`) run daily, on pushes to
+`nightly`, and on manual dispatch, producing dated pre-releases; the
+rolling `nightly` release carries the updater manifest for that channel.
 
 ### Required GitHub Actions secrets
 
-| Secret                        | Purpose                                      |
-| ----------------------------- | -------------------------------------------- |
-| `MAC_CERTIFICATE_BASE64`      | Base64-encoded .p12 Developer ID certificate |
-| `MAC_CERTIFICATE_PASSWORD`    | Password for the .p12 file                   |
-| `APPLE_ID`                    | Apple ID email for notarization              |
-| `APPLE_APP_SPECIFIC_PASSWORD` | App-specific password for notarization       |
-| `APPLE_TEAM_ID`               | Apple Developer Team ID                      |
+| Secret                                | Purpose                                       |
+| ------------------------------------- | --------------------------------------------- |
+| `TAURI_SIGNING_PRIVATE_KEY`           | Updater artifact signing (minisign)           |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`  | Password for that key (empty string)          |
+| `MAC_CERTIFICATE_BASE64`              | Base64-encoded .p12 Developer ID certificate  |
+| `MAC_CERTIFICATE_PASSWORD`            | Password for the .p12 file                    |
+| `APPLE_ID`                            | Apple ID email for notarization               |
+| `APPLE_APP_SPECIFIC_PASSWORD`         | App-specific password for notarization        |
+| `APPLE_TEAM_ID`                       | Apple Developer Team ID                       |
 
-`GITHUB_TOKEN` is provided automatically by Actions. If any macOS secrets are missing, the build still succeeds but produces unsigned/un-notarized artifacts.
-
-See `.env.example` for the credentials needed for local macOS signing/notarization.
+`GITHUB_TOKEN` is provided automatically. If macOS secrets are missing the
+build still succeeds but ships unsigned; if the updater key is missing,
+bundling fails (build with `--no-bundle` locally instead).
 
 ### Auto-updates
 
-`electron-updater` is configured with the `github` provider. On each platform, it looks for the matching `latest-*.yml` manifest in GitHub Releases and downloads updates silently. Updates install on next app quit.
+`tauri-plugin-updater` with a prompted flow — the app asks before
+downloading (Install / Remind Me Later / Skip This Version), shows
+progress on the dock/taskbar, and restores open files after the update
+restart. See `docs/architecture.md` and `src-tauri/src/update.rs`.

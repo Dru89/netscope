@@ -1,4 +1,4 @@
-.PHONY: dev build package test test-watch lint format clean icons release site-dev site-build
+.PHONY: dev build package test test-watch test-e2e lint format clean icons release site-dev site-build
 
 # Start the app in dev mode (Vite dev server + Tauri shell with hot reload).
 dev:
@@ -20,6 +20,13 @@ test:
 # Run renderer tests in watch mode.
 test-watch:
 	npm run test:watch
+
+# Run WebDriver E2E tests against the release binary. Requires tauri-driver
+# (cargo install tauri-driver) and the distro's WebKitWebDriver; see
+# test/e2e/helpers.ts. Linux-only.
+test-e2e:
+	npx tauri build --no-bundle
+	npm run test:e2e
 
 # Type-check only (no emit).
 lint:

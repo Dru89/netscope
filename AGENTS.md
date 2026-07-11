@@ -2,118 +2,114 @@
 
 ## Project Overview
 
-**Netscope** is a desktop app for viewing and analyzing HTTP Archive (HAR) files, available for macOS, Windows, and Linux. It provides a Chrome DevTools-like network inspection experience as a standalone app. Built with Electron 41, React 19, TypeScript 6, and Vite 5.
+**Netscope** is a native, local-first desktop app for viewing and analyzing HTTP Archive (HAR) files, available for macOS, Windows, and Linux. It provides a Chrome DevTools-like network inspection experience as a standalone document app. Built with Tauri 2 (Rust shell), React 19, TypeScript, and Vite.
 
 - **Package name:** `netscope`
 - **App ID:** `dev.unremarkable.netscope`
 - **Repository:** https://github.com/Dru89/netscope
 - **License:** MIT
 
+Two commitments shape everything: it's **local-first** (HAR files carry cookies and auth tokens; nothing is ever uploaded — the only network request is the update check), and it's a **document app** (one window per file, file associations, recent documents, macOS proxy icon — not a single-window SPA).
+
 ## Architecture
 
-Netscope is an Electron app with three process layers:
+Netscope has two layers:
 
-1. **Main process** (`electron/main.ts`) -- Node.js runtime handling window management, file I/O, native menus, file associations (macOS Finder, command-line args on all platforms), theme detection, auto-updates (`electron-updater`), and single-instance enforcement (`requestSingleInstanceLock`). Manages multiple windows via a `Set<BrowserWindow>` and tracks loaded files in a `Map<BrowserWindow, string>`. Platform-specific behavior (title bar style, app menu, quit-on-close) is guarded by an `isMac` constant. On Windows/Linux, file opens from the OS go through the `second-instance` event; on macOS they use the `open-file` event.
+1. **Rust shell** (`src-tauri/src/`) — window management, file I/O, native menus, file associations, single-instance, recent files, the auto-updater, and the request-row context menu. Modules:
+   - `lib.rs` — plugin setup, `#[tauri::command]` definitions, startup (CLI arg / restore-after-update), `RunEvent` handling (macOS `Opened`/`Reopen`/`ExitRequested`)
+   - `windows.rs` — window creation (cascade positioning with Wayland-safe tracking, hidden-until-ready), dedup (`open_files` map), welcome-window reuse, `open_file_from_path` (the unified entry for OS-driven opens), error dialogs
+   - `menu.rs` — the full native menu (File/Edit/View/Window/Help + macOS app menu), rebuilt when recent files or update state change
+   - `context_menu.rs` — the native request-row context menu; copy actions round-trip to the webview, which runs the TS copy formatters and calls `set_clipboard`
+   - `recent.rs` — Open Recent list, persisted in `preferences.json` and mirrored to the OS recent-documents list (NSDocumentController / SHAddToRecentDocs / GTK RecentManager)
+   - `update.rs` — prompted update flow (Install / Remind Me Later / Skip This Version), download progress on the taskbar, restore-open-files across the update restart, About-panel status
+   - `prefs.rs` — `preferences.json` in the app-data dir
+   - `state.rs` — `AppState` (window/file maps, cascade positions, zoom levels, recent list, pending update)
 
-2. **Preload script** (`electron/preload.ts`) -- Bridge layer using `contextBridge.exposeInMainWorld` to expose a typed `window.electronAPI` with 9 methods. This is the only communication channel between main and renderer.
+2. **Renderer** (`src/`) — a React SPA bundled by Vite. All state lives in `App.tsx` (no external state library). Native access goes exclusively through `src/platform.ts` — no other file may import `@tauri-apps/*`. Every `platform.ts` function no-ops in plain-browser dev, where `npx vite` + `?fixture=/test/fixtures/x.har` loads a file over HTTP.
 
-3. **Renderer** (`src/`) -- A React 18 SPA bundled by Vite. No direct Node.js access. All file I/O goes through IPC. State is managed entirely with React hooks in `App.tsx` (no external state library). Falls back to browser `FileReader` when `window.electronAPI` is unavailable (dev mode).
+IPC: `#[tauri::command]` invocations renderer→Rust; events (`har-file-opened`, `request-open-file`, `context-menu-action`, `context-menu-sort`) Rust→renderer. **Gotcha:** `emit_to` broadcasts to every window, so targeted events carry a `targetLabel` the renderer filters on (or an `isFocused()` guard for `request-open-file`).
 
-Detailed architecture docs are in `docs/architecture.md`.
+Detailed docs are in `docs/architecture.md`.
 
 ## Directory Structure
 
 ```
-electron/           Electron main process + preload script
+src-tauri/          Rust shell (see modules above)
+  capabilities/     Webview permission grants (keep minimal)
+  icons/            Bundler icons (regenerate with make icons)
+  netscope.desktop  Linux desktop-entry template (adds %F + MimeType)
+  tauri.conf.json   App config; version reads from package.json
 src/
   components/       React components (WelcomeScreen, Toolbar, FilterInput, RequestTable, DetailPanel, SummaryBar)
-  hooks/            React hooks (currently empty, reserved for future use)
-  styles/           Plain CSS (global.css for theme variables, app.css for component styles)
-  types/            TypeScript types (HAR spec types, electron API declarations)
-  utils/            HAR parsing, formatting, content type classification, filter parsing, filter suggestions, copy formatters
-  App.tsx           Root component -- all application state lives here
-  main.tsx          ReactDOM entry point
-build/              Electron-builder resources (icon.icns)
-images/             README screenshots and app icon source (netscope.png)
+  platform.ts       The renderer↔shell seam (all native access)
+  styles/           tokens.css (design tokens — source of truth), global.css, app.css
+  types/            HAR spec types
+  utils/            HAR parsing, filtering, suggestions, copy formatters, JSON highlighting — pure functions with tests
+  App.tsx           Root component — all application state lives here
 scripts/
-  notarize.js       Apple notarization afterSign hook (uses @electron/notarize)
-site/               Marketing website (Astro 5, deployed to Netlify)
-  src/layouts/      Base HTML layout with global CSS
-  src/pages/        Single-page landing site (index.astro)
-  public/           Static assets (favicons, screenshots)
-docs/               Internal docs (architecture.md, development.md, features.md, har-format.md, macos-document-icons.md)
+  build-pacman.sh   Wraps the .deb into an Arch pacman package (CI)
+test/
+  e2e/              WebDriver E2E via tauri-driver (Linux; see helpers.ts)
+  fixtures/         HAR captures (Git LFS)
+docs/               Internal docs
+site/               Marketing website (Astro, Netlify)
+handoff/            Electron→Tauri migration briefs and the design handoff (historical)
 ```
 
-**Build outputs (all git-ignored):** `dist/` (Vite output), `dist-electron/` (bundled main/preload), `release/` (electron-builder .app/.dmg/.zip).
+**Build outputs (git-ignored):** `dist/` (Vite), `src-tauri/target/` (Rust + bundles under `target/release/bundle/`).
 
 ## Code Conventions
 
-- **Components:** Named function exports in PascalCase files. Props interfaces defined inline at the top of each file. Sub-components may be co-located in the same file (e.g., `DetailPanel.tsx` contains 7 components for the panel and its tabs). `Toolbar.tsx` and `FilterInput.tsx` accept a `ref` prop for external focus control.
-- **Types:** HAR spec types prefixed with `Har` (e.g., `HarEntry`, `HarRequest`). App types unprefixed (`FilterState`, `SortState`). Computed/internal fields prefixed with underscore (`_index`, `_url`, `_transferSize`).
-- **Imports:** Use `import type { ... }` for type-only imports. A `@/` path alias is configured but not currently used -- existing code uses relative paths.
-- **Styling:** Plain CSS with BEM-like class names. Theme via CSS custom properties in `:root` and `@media (prefers-color-scheme: dark)`. No CSS modules, CSS-in-JS, or Tailwind. Color variables follow `--color-{category}-{variant}` naming.
-- **State management:** All state in `App.tsx` via `useState`/`useCallback`/`useMemo`, passed down as props. Theme preference persisted to `localStorage` key `themeMode`.
-- **IPC pattern:** `ipcMain.handle` for renderer-to-main requests; `webContents.send` + `ipcRenderer.on` for main-to-renderer pushes; `ipcRenderer.send` for fire-and-forget signals (e.g., `renderer-ready`). All listeners return unsubscribe functions for React `useEffect` cleanup.
+- **Components:** Named function exports in PascalCase files; props interfaces inline; sub-components may be co-located. `Toolbar`/`FilterInput` accept a `ref` for external focus control.
+- **Types:** HAR spec types prefixed `Har`; app types unprefixed; computed fields prefixed `_`.
+- **Styling:** Plain CSS, BEM-ish class names. **Every color must be a `--ns-*` token** from `src/styles/tokens.css` (the "Instrument" design system — light/dark/system via `data-theme` on `<html>`; System mode = attribute absent, `prefers-color-scheme` decides). No CSS frameworks, no color literals in component styles.
+- **State:** All state in `App.tsx` via hooks, passed as props. `filteredEntries`/`sortedEntries` are memoized — keep them that way; large HARs re-filter on every keystroke otherwise.
+- **Pure utilities:** parsing/filtering/formatting live in `src/utils/` as pure functions with Vitest tests next to them.
+- **Rust:** platform-specific code behind `#[cfg(target_os = ...)]`; macOS AppKit calls hop to the main thread via `run_on_main_thread`.
 - **No default exports** except `App.tsx`.
 
 ## Key Commands
 
 ```bash
-make dev              # Vite dev server + Electron with hot reload
-make build            # tsc && vite build (bundle only, no packaging)
-make package          # Full production build: tsc && vite build && electron-builder
-make test             # Run tests with Vitest (single run)
-make test-watch       # Run tests in watch mode
-make test-e2e         # Build app, then run Playwright E2E tests
+make dev              # Vite dev server + Tauri shell with hot reload
+make build            # tsc && vite build (renderer bundle only)
+make package          # Full production build: tauri build (bundles for this platform)
+make test             # Vitest unit tests + cargo test
+make test-watch       # Renderer tests in watch mode
+make test-e2e         # Build binary + WebDriver E2E (Linux; needs tauri-driver + WebKitWebDriver)
 make lint             # Type-check only (tsc --noEmit)
-make clean            # Remove dist/, dist-electron/, release/
-make icons            # Regenerate platform icons from images/netscope.png
+make clean            # Remove dist/ and bundle outputs
+make icons            # Regenerate all icons from images/netscope.png (tauri icon)
 make release          # Interactive version bump, tag, push (CI builds the release)
 make site-dev         # Astro dev server for the marketing site
 make site-build       # Build the marketing site
 ```
 
-All targets are also available as npm scripts (`npm run dev`, `npm test`, etc.) except `make lint`, `make clean`, `make icons`, `make test-e2e`, and `make release` which are Makefile-only.
+Production builds with the updater enabled need `TAURI_SIGNING_PRIVATE_KEY` (+`_PASSWORD`) in the environment; CI has them as secrets.
 
 ## Testing
 
-Tests use **Vitest** (configured automatically through the Vite config). Test files live alongside the source files they test, using the `.test.ts` suffix.
+Unit tests use **Vitest**; test files sit next to sources (`.test.ts`).
 
 ```
-src/utils/filterParser.test.ts       # Filter parser and matcher unit tests (54 tests)
-src/utils/filterSuggestions.test.ts  # Autocomplete suggestion logic tests (32 tests)
-src/utils/copyFormatters.test.ts     # Copy-as-cURL/fetch/PowerShell formatter tests (21 tests)
+src/utils/filterParser.test.ts       # Filter parser and matcher
+src/utils/filterSuggestions.test.ts  # Autocomplete suggestions
+src/utils/copyFormatters.test.ts     # Copy-as-cURL/fetch/PowerShell
+src/utils/highlightJson.test.ts      # Response-tab JSON syntax tint
+src-tauri/src/update.rs              # #[cfg(test)] date math for remind-later
 ```
 
-Run `npm test` before committing to make sure nothing is broken. When adding new utility functions, write tests. Component tests are not set up yet (no jsdom/happy-dom environment or React Testing Library).
+Run `npm test` (and `cargo test --manifest-path src-tauri/Cargo.toml`) before committing. New utility functions need tests.
 
 ### E2E Tests
 
-End-to-end tests use **Playwright** with Electron support (`@playwright/test`). They launch the real Electron app against bundled output and test the full stack (main process, preload, renderer).
+`test/e2e/` drives the real release binary through **tauri-driver** (WebDriver → WebKitWebDriver) with webdriverio + Vitest: welcome screen, CLI-arg file open, filtering, detail panel, sorting, keyboard nav.
 
-```
-test/e2e/app-launch.test.ts   # Welcome screen, preload API, platform detection (4 tests)
-test/e2e/file-open.test.ts    # HAR file loading via IPC, table/toolbar/summary rendering (5 tests)
-test/e2e/filter.test.ts       # Filter input, domain/negation/clear, toolbar count (5 tests)
-test/e2e/interaction.test.ts  # Row click, column sort, keyboard navigation (3 tests)
-test/e2e/helpers.ts           # Test fixtures, Electron launch helper, IPC file opener
-test/fixtures/*.har           # HAR captures (Git LFS): example.com, github.com, google.com
-```
-
-Run `make test-e2e` (which builds first) or `npx playwright test` if already built. E2E tests run on all three platforms in CI via the `e2e` job in `.github/workflows/ci.yml`. On Linux, tests run under `xvfb-run` for a virtual display.
-
-**Limitation:** Native context menus (right-click) can't be tested in Playwright because OS-level menus block the Electron event loop. The context menu is tested indirectly through the copy formatter unit tests and manual QA.
-
-### Writing Tests
-
-- Test files go next to the source file: `foo.ts` -> `foo.test.ts`
-- Use `describe`/`it`/`expect` from Vitest
-- For testing against HAR entries, build minimal fakes with just the fields your test needs (see `makeEntry()` helper in `filterParser.test.ts` for the pattern)
-- No HAR fixture files are needed for unit tests -- construct data inline
+- Linux only: tauri-driver has no macOS support; Windows needs msedgedriver wiring (future work). Arch doesn't ship WebKitWebDriver, so on Arch dev machines E2E is CI-only.
+- CI runs it under `xvfb-run` in the `e2e` job (`.github/workflows/ci.yml`).
+- Native menus and dialogs can't be driven over WebDriver; the context menu is covered indirectly by the copy-formatter unit tests and the macOS QA checklist (`docs/macos-qa-checklist.md`).
 
 ## Keyboard Shortcuts
-
-The app supports keyboard navigation, implemented across `RequestTable.tsx` (table-scoped) and `App.tsx` (global document listener).
 
 ### Table-scoped (when request table has focus)
 
@@ -129,169 +125,121 @@ The app supports keyboard navigation, implemented across `RequestTable.tsx` (tab
 
 | Shortcut | Action                                                                            |
 | -------- | --------------------------------------------------------------------------------- |
-| Cmd+N    | Open a new empty window                                                           |
-| Cmd+O    | Open file -- loads in place on welcome screen, opens new window if file is loaded |
+| Cmd+N    | Open a new empty window (native menu)                                             |
+| Cmd+O    | Open file — loads in place on welcome screen, opens new window if file is loaded  |
+| Cmd+W    | Close window (native menu)                                                        |
+| Cmd+R / Cmd+0 / Cmd+= / Cmd+- | Reload / reset zoom / zoom in / zoom out (View menu)         |
 | Escape   | Close detail panel and return focus to table; blur filter input                   |
 | /        | Focus the toolbar filter input                                                    |
 | Cmd+F    | Focus the toolbar filter (unless focus is in the detail panel)                    |
 
-**Focus model:** The table container (`div.request-table-container`) has `tabIndex={0}` and handles its own `onKeyDown`. When focus moves elsewhere (detail panel, filter input), table shortcuts stop firing. This is intentional -- arrow keys in the detail panel scroll content, not the entry list. Escape returns focus to the table.
+**Accelerator ownership:** window-level shortcuts (Cmd+N/O/W/R, zoom) belong to the **native menu only** — do not add web-layer keydown handlers for them; both firing was the source of the double-open bugs. Content shortcuts (/, Cmd+F, Escape, table nav) live in the web layer.
 
-**Gotcha with Escape:** When Escape is pressed inside an input within the detail panel (e.g., the Source tab search input), the global handler defers to the detail panel's own Escape handling. Only a second Escape (or Escape from a non-input element) closes the panel.
+**Focus model:** the table container has `tabIndex={0}` and handles its own keys. Focus in the detail panel or filter input disables table shortcuts by design. Escape unwinds in a ladder: Source-tab search → detail panel → table focus.
 
 ## Context Menu
 
-Right-clicking a request row shows a native OS context menu (built in the main process via `Menu.buildFromTemplate`). The renderer sends entry data and filtered entries to main via the `show-request-context-menu` IPC channel; menu actions either write to the clipboard directly in main or send a sort action back to the renderer via `context-menu-sort`.
+Right-clicking a request row shows a **native** context menu built in Rust (`context_menu.rs`) and popped at the cursor. Only the URL and sort state cross IPC when it opens; entry data stays in the webview. Menu actions emit `context-menu-action` back to the originating window, which runs the pure copy formatters (`src/utils/copyFormatters.ts`) and writes the clipboard via the `set_clipboard` command.
 
-### Menu items
-
-| Item                           | Action                                                                       |
-| ------------------------------ | ---------------------------------------------------------------------------- |
-| Open in Browser                | Opens the request URL in the default browser via `shell.openExternal`        |
-| Copy > Copy URL                | Copies the request URL                                                       |
-| Copy > Copy as cURL            | Copies a `curl` command with method, headers, and body                       |
-| Copy > Copy as fetch           | Copies a browser `fetch()` call (omits browser-managed headers)              |
-| Copy > Copy as fetch (Node.js) | Copies a `fetch()` call with all headers (includes Cookie, User-Agent, etc.) |
-| Copy > Copy as PowerShell      | Copies an `Invoke-WebRequest` command                                        |
-| Copy > Copy Response           | Copies the raw response body                                                 |
-| Copy > Copy All Listed ...     | Bulk variants of the above for all currently filtered entries                |
-| Sort By > ...                  | Changes the table sort field/direction (same as clicking column headers)     |
-
-### Copy formatters
-
-The formatter functions (`toCurl`, `toFetch`, `toFetchNode`, `toPowerShell`, `getResponseBody`) live in `src/utils/copyFormatters.ts` as pure functions. They take a `HarEntry` and return a string. The main process imports them directly -- they have no browser or React dependencies. Tests are in `src/utils/copyFormatters.test.ts`.
+| Item                           | Action                                                              |
+| ------------------------------ | ------------------------------------------------------------------- |
+| Open in Browser                | Opens the URL via the opener plugin                                 |
+| Copy > Copy URL / as cURL / as fetch / as fetch (Node.js) / as PowerShell / Response | Single-entry copy variants   |
+| Copy > Copy All Listed ...     | Bulk variants over the currently filtered set                       |
+| Sort By > ...                  | Changes sort; checked item shows the current field + direction      |
 
 ## Multi-Window Behavior
 
-The app supports multiple windows. New windows cascade 28px down and right from the focused window so title bars remain visible.
+Each HAR opens in its own OS window. New windows cascade 28px down-right from the **focused** window (Ghostty/Chrome behavior — deliberate change from the Electron app, which anchored on most-recently-created). Cascade positions are tracked in an explicit map because `outer_position()` fails on Wayland.
 
 ### Opening files
 
-- **Cmd+O on welcome screen:** Loads the file in the current window.
-- **Cmd+O with a file already loaded:** Opens the file in a new window (or focuses an existing window if that file is already open).
-- **Drag and drop into a window:** Always replaces the current file in that window.
-- **Finder double-click / dock icon drop:** Routes through `openFileInNewWindow`, which deduplicates by file path, reuses an empty welcome-screen window, or creates a new window.
+Every open path funnels through dedup: opening an already-open file focuses its window. Entry points: Open dialog (multi-select: first file in place, rest in new windows), Open Recent, drag-drop (native paths via `onDragDropEvent`), CLI args, second launches (single-instance handoff on Windows/Linux), and macOS `open-file` events. OS-driven opens reuse a **focused** empty welcome window (or the sole empty window at launch); an unfocused welcome window is never silently taken over.
 
-### Window titles
-
-Every file-open code path sets `win.setTitle(fileName)` and `win.setRepresentedFilename(resolved)` (macOS). The title isn't visible in the window chrome (due to `hiddenInset` title bar style) but appears in Mission Control, the Window menu, and Cmd-Tab.
+Windows are created hidden and shown when the renderer signals ready (`signal_ready`), with an 800ms timeout — no welcome-screen flash, no white flash in dark mode.
 
 ### Recent files
 
-The File > Open Recent submenu is built from an in-memory `recentDocuments` array (capped at 10). Each file-open path calls `addRecentDocument()` which updates both the array and the OS-level recent documents list (via `app.addRecentDocument()`, for the dock right-click menu). The app menu is rebuilt after each change. Missing files are removed from the array when detected and trigger a native warning dialog.
+File > Open Recent is capped at 10, persisted in `preferences.json` (an improvement over Electron's in-memory list), and mirrored to the OS recent-documents list. Missing files show a native warning and are pruned.
 
-### Error handling
+### Quit behavior
 
-- **File not found (from Open Recent or dock):** Native warning dialog on the focused window. No new window is created. Stale entry is removed from the recent files list.
-- **File not found (from `sendFileToWindow`):** Native warning dialog on the target window. Window state is unchanged.
-- **Invalid HAR content:** Error message displayed on the welcome screen in the renderer (existing behavior).
+Windows/Linux: the app exits when the last window closes (Tauri default). macOS: `ExitRequested` is prevented, and dock-click (`Reopen`) creates a new welcome window.
 
 ## Filter Syntax
 
-The toolbar search input supports Chrome DevTools-style structured filters via `src/utils/filterParser.ts`. The parser (`parseFilterQuery`) tokenizes the input and the matcher (`matchEntry`) tests entries against all tokens.
+The toolbar input supports DevTools-style structured filters (`src/utils/filterParser.ts`):
 
-### Supported filters
-
-| Filter                 | Example                        | What it matches                             |
+| Filter                 | Example                        | Matches                                     |
 | ---------------------- | ------------------------------ | ------------------------------------------- |
 | (plain text)           | `api`                          | URL or entry name substring                 |
 | `domain:`              | `domain:*.example.com`         | Request domain (wildcard supported)         |
 | `method:`              | `method:POST`                  | HTTP method                                 |
-| `status-code:`         | `status-code:4xx`              | Status code (exact or range like `4xx`)     |
+| `status-code:`         | `status-code:4xx`              | Status code (exact or `4xx` range)          |
 | `mime-type:`           | `mime-type:json`               | Response MIME type substring                |
-| `larger-than:`         | `larger-than:1k`               | Transfer size threshold (supports `k`, `M`) |
+| `larger-than:`         | `larger-than:1k`               | Transfer size threshold (`k`, `M`)          |
 | `scheme:`              | `scheme:https`                 | URL scheme                                  |
 | `has-response-header:` | `has-response-header:x-custom` | Presence of a response header               |
 | `url:`                 | `url:/api/v2`                  | URL substring (explicit)                    |
 
-- Multiple filters are AND'd together
-- Prefix any filter with `-` to negate it: `-domain:analytics.com`
-- Quoted values supported: `domain:"my site.com"`
-- Toolbar button filters (content type, method, status) are separate and AND'd with the text filters
+Tokens AND-combine; `-` negates; quoted values allowed. Toolbar content-type chips are a second filter layer AND-ed with the text query. Autocomplete (`filterSuggestions.ts`) offers keys and real values from the loaded file. Default sort is Waterfall ascending (chronological).
 
-### How it fits together
+## Auto-Update
 
-`App.tsx` parses `filter.search` into tokens with `useMemo`, then in the `filteredEntries` computation, calls `matchEntry(tokens, entry)` before applying the toolbar button filters. The old substring-only search is fully replaced by the parser -- plain text tokens produce the same behavior as before.
+`tauri-plugin-updater` with a **prompted** flow (`update.rs`): Install Update / Remind Me Later (persisted for the UTC calendar day) / Skip This Version (persisted until a newer version), stored in `preferences.json`. Download progress shows on the dock/taskbar; failures get a dialog; the About panel shows "version X is ready — restart to install"; open files are restored after the update restart.
 
-### Autocomplete
+Channels: stable reads `releases/latest/download/latest.json`; nightly builds are pointed (via `--config` at build time) at a rolling `nightly` release manifest that the nightly workflow refreshes. Linux self-update only works for the AppImage; deb/pacman installs update through the package manager.
 
-The filter input (`FilterInput.tsx`) provides autocomplete suggestions as you type. The suggestion logic lives in `src/utils/filterSuggestions.ts`:
-
-- **Key suggestions:** When typing at the start of a token (no colon yet), the dropdown shows matching filter type names (e.g., typing `do` suggests `domain:`).
-- **Value suggestions:** After typing a filter key and colon (e.g., `method:`), the dropdown shows actual values extracted from the loaded HAR data -- unique domains, methods, status codes, MIME types, schemes, and response header names. These are precomputed by `extractSuggestionData()` in a `useMemo` in `App.tsx` and passed to the Toolbar as `suggestionData`.
-- **Keyboard interaction:** Arrow keys navigate suggestions, Enter/Tab accepts the selected suggestion, Escape dismisses the dropdown. When the dropdown is open, these keys are intercepted by the FilterInput and don't propagate to the table or global handlers.
-- `larger-than:` and `url:` don't offer value suggestions (they're freeform).
+Updater artifacts are signed with a minisign key (`plugins.updater.pubkey` in `tauri.conf.json`); CI signs with `TAURI_SIGNING_PRIVATE_KEY`. **If that key is lost, shipped apps can never update again** — it's backed up in Drew's password manager.
 
 ## Architecture Decisions / Patterns to Preserve
 
-- **No external state library.** All state lives in `App.tsx` and flows down as props. Don't introduce Redux, Zustand, Jotai, etc. without good reason.
-- **No virtualization.** The request table renders all rows as real DOM elements. This is fine for typical HAR files (hundreds to low thousands of entries). If performance becomes an issue with very large files, virtualization would be the right fix, but it adds complexity to keyboard navigation and scroll-into-view logic.
-- **Pure utilities for testability.** Business logic that can be tested without React (parsing, filtering, formatting) belongs in `src/utils/` as pure functions. Keep components thin.
-- **CSS custom properties for theming.** All colors go through `--color-*` variables defined in `global.css`. Don't use hardcoded color values in component styles.
+- **Local-first, always.** No network calls except the update check. Never transmit HAR contents.
+- **No external state library.** All state in `App.tsx`.
+- **No row virtualization.** All rows are real DOM. Measured: 10k entries render and stay responsive for selection (memoized filtering); a filter keystroke on 10k entries costs ~500ms. Revisit only if real captures hurt — virtualization complicates keyboard nav and scroll-into-view.
+- **No CSS framework.** Tokens + vanilla CSS.
+- **Pure utilities, thin components.**
+- **Read-only tool.** No editing, no request replay, no collections. Copy-as-X is the reproduce workflow.
+- **platform.ts is the only native seam.** Keep it that way; it's what keeps the renderer testable in a browser.
 
 ## Release Process
 
-Releases are built and published by **GitHub Actions** (`.github/workflows/release.yml`). The workflow triggers on version tags (`v*`) and runs a matrix build across macOS, Windows, and Linux.
+Releases are tag-driven (`v*`) and built by `.github/workflows/release.yml` on a macOS/Windows/Linux matrix using `tauri-action`.
 
-### How to release
+1. `make release` (or `make release VERSION=<patch|minor|major|x.y.z>`) — bumps `package.json` (the single version source; `tauri.conf.json` reads it), commits, tags, pushes.
+2. CI builds: signed + notarized macOS universal dmg/app (with a codesign verification step), Windows NSIS (unsigned — accepted SmartScreen tradeoff), Linux AppImage + deb + a pacman package wrapped from the deb (`scripts/build-pacman.sh`; Arch lacks FUSE 2 for AppImages).
+3. `latest.json` (updater manifest) is merged across platforms onto the release.
 
-1. Bump `version` in `package.json` and run `npm install --package-lock-only` to sync the lockfile
-2. Commit: `git commit -am "Bump version to X.Y.Z"`
-3. Run `npm run release` (or manually: `git tag vX.Y.Z && git push origin main && git push origin vX.Y.Z`)
-4. GitHub Actions builds, signs (macOS), notarizes (macOS), and uploads to GitHub Releases
-
-### What the workflow does
-
-1. Runs `npm test` on Ubuntu
-2. Builds on three runners in parallel:
-   - **macOS** (`macos-latest`) -- imports the signing certificate from secrets, builds DMG + ZIP (arm64 and x64), notarizes with Apple, publishes
-   - **Windows** (`windows-latest`) -- builds NSIS installer (unsigned), publishes
-   - **Linux** (`ubuntu-latest`) -- builds AppImage + .deb, publishes
-3. electron-builder uploads all artifacts and `latest-*.yml` manifests to the same GitHub Release
+Nightly (`nightly.yml`): daily cron + pushes to `nightly` + manual dispatch → dated pre-releases (`vX.Y.Z-nightly.YYYYMMDD`), manifest copied to the rolling `nightly` release.
 
 ### Required GitHub Actions secrets
 
-| Secret                        | Purpose                                      |
-| ----------------------------- | -------------------------------------------- |
-| `MAC_CERTIFICATE_BASE64`      | Base64-encoded .p12 Developer ID certificate |
-| `MAC_CERTIFICATE_PASSWORD`    | Password for the .p12 file                   |
-| `APPLE_ID`                    | Apple ID email for notarization              |
-| `APPLE_APP_SPECIFIC_PASSWORD` | App-specific password for notarization       |
-| `APPLE_TEAM_ID`               | Apple Developer Team ID                      |
+| Secret                        | Purpose                                        |
+| ----------------------------- | ---------------------------------------------- |
+| `TAURI_SIGNING_PRIVATE_KEY`   | Updater artifact signing (minisign)            |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for the key (empty string)     |
+| `MAC_CERTIFICATE_BASE64`      | Base64-encoded .p12 Developer ID certificate   |
+| `MAC_CERTIFICATE_PASSWORD`    | Password for the .p12                          |
+| `APPLE_ID`                    | Apple ID email for notarization                |
+| `APPLE_APP_SPECIFIC_PASSWORD` | App-specific password for notarization         |
+| `APPLE_TEAM_ID`               | Apple Developer Team ID                        |
 
-`GITHUB_TOKEN` is provided automatically by Actions. If any macOS secrets are missing, the build still succeeds but produces unsigned/un-notarized artifacts.
-
-### Auto-updates
-
-`electron-updater` is configured with the `github` provider. On each platform, it looks for the matching `latest-*.yml` manifest in GitHub Releases. When an update is found, the user is prompted with three options: Install Update, Remind Me Later, or Skip This Version. Skipped versions are persisted in `preferences.json` in the app's userData directory and won't be prompted again until a newer version is available. No additional server or update feed is needed.
+**Do not bump the version as part of code-change commits.** `make release` owns version bumps; code and version changes stay separate in history.
 
 ## App Icon
 
-The source icon is `images/netscope.png` (2048x2048 RGBA). Platform-specific icons in `build/`:
+Source: `images/netscope.png` (2048×2048). `make icons` regenerates everything in `src-tauri/icons/` via `tauri icon`. Site favicons in `site/public/` are derived from the same source.
 
-- `icon.icns` -- macOS (generated with `sips` + `iconutil`)
-- `icon.ico` -- Windows (generated with ImageMagick: `magick images/netscope.png -resize 256x256 -define icon:auto-resize=256,128,64,48,32,16 build/icon.ico`)
-- `icon.png` -- Linux (512x512, generated with `sips -z 512 512`)
-
-Site favicons in `site/public/` are also derived from the source image. If the icon changes, regenerate all derived files.
+macOS document icons: the `.har` UTI is declared **without** any icon reference so macOS generates the native page-curl document icon — see `docs/macos-document-icons.md` before touching `fileAssociations` or Info.plist icon keys.
 
 ## Important Notes
 
-- The app builds for **macOS 12+** (arm64 + x64), **Windows 10+** (x64, NSIS installer), and **Linux** (x64, AppImage + deb).
-- Windows builds are unsigned -- users will see SmartScreen warnings on first run.
-- `contextIsolation: true` and `nodeIntegration: false` -- the renderer cannot access Node.js APIs directly.
-- The marketing site is a separate Astro project in `site/`, deployed to Netlify (configured in `netlify.toml` at the repo root).
-- When bumping versions, update `version` in `package.json` and run `npm install --package-lock-only` to sync `package-lock.json`.
-- **Do not bump the version in `package.json` as part of code change commits.** Version bumps are handled exclusively through `make release VERSION=<patch|minor|major>`, which bumps, commits, tags, and pushes in one step. Keep code changes and version bumps in separate commits.
+- Builds target macOS 12+ (universal), Windows 10+ (x64, NSIS), Linux x64 (AppImage/deb/pacman).
+- `dist/` must exist before `cargo` commands that touch `tauri::generate_context!` (run `npm run build:vite` first).
+- The webview capability set (`src-tauri/capabilities/default.json`) is deliberately minimal; file reads go through the `read_har_file` command rather than fs-plugin scopes, because drops/recent files/CLI args hand the app arbitrary paths.
+- On NVIDIA + Wayland, WebKitGTK's DMA-BUF renderer is disabled at startup (`lib.rs`) to avoid a crash; don't remove that guard without testing on that stack.
+- The marketing site (`site/`) deploys to Netlify via `netlify.toml`.
 
 ## Keeping This File Up to Date
 
-When you make changes to the project, update this file to reflect them. Specifically:
-
-- New commands or scripts: add to Key Commands
-- New keyboard shortcuts: add to the Keyboard Shortcuts table
-- New filter types: add to the Filter Syntax table
-- New test files or testing patterns: add to the Testing section
-- Architecture changes (new state, new process, new IPC): update Architecture section
-- New directories or significant files: update Directory Structure
-- Update `docs/` when features change (especially `docs/features.md` and `docs/architecture.md`)
+When you change the project, update this file: new commands → Key Commands; new shortcuts → Keyboard Shortcuts; new filters → Filter Syntax; new tests → Testing; architecture changes → Architecture; new directories → Directory Structure. Update `docs/` when features change (especially `docs/features.md` and `docs/architecture.md`).

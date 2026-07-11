@@ -1,111 +1,105 @@
 # Architecture
 
-Netscope is an Electron application with a clear separation between the **main process** (Node.js), the **preload script** (bridge), and the **renderer process** (React UI).
-
-## Process Model
-
-```
-+-------------------+       IPC        +-------------------+
-|   Main Process    | <--------------> |  Renderer Process  |
-|   (electron/)     |    (preload)     |  (src/)            |
-|                   |                  |                    |
-|  - Window mgmt    |                  |  - React UI        |
-|  - File I/O       |                  |  - HAR parsing     |
-|  - Native menus   |                  |  - State mgmt      |
-|  - File assoc.    |                  |  - Filtering/sort  |
-|  - Theme detect   |                  |  - Rendering       |
-+-------------------+                  +-------------------+
-```
-
-### Main Process (`electron/main.ts`)
-
-The main process runs in Node.js and handles everything that requires native OS access:
-
-- **Window creation** -- Creates a `BrowserWindow` with a hidden title bar (`hiddenInset` style) and macOS traffic light positioning. The window starts hidden and is shown once `ready-to-show` fires to avoid a white flash.
-
-- **File open dialog** -- Exposes an `open-file-dialog` IPC handler that opens a native file picker filtered to `.har` files. Reads the selected file from disk and returns its content to the renderer.
-
-- **Drag-and-drop support** -- Exposes a `read-har-file` IPC handler. When a file is dropped onto the window, the renderer sends the file path to the main process, which reads it from disk and returns the content.
-
-- **Finder file association** -- Listens for the `open-file` app event, which fires when macOS asks the app to open a `.har` file (double-click in Finder, drag onto dock icon, or `open` CLI command). If the window isn't ready yet, the file path is stored in `pendingFile` and sent once the window loads.
-
-- **Command-line arguments** -- On startup, checks `process.argv` for a `.har` file path, supporting `open "Netscope.app" --args file.har` usage.
-
-- **Application menu** -- Builds a native menu bar with File > Open HAR File (Cmd+O), standard Edit/View/Window menus, and the About panel.
-
-- **Theme detection** -- Queries `nativeTheme.shouldUseDarkColors` and sends `theme-changed` events to the renderer when the system theme changes.
-
-### Preload Script (`electron/preload.ts`)
-
-The preload script runs in a sandboxed context and uses `contextBridge.exposeInMainWorld` to create a safe `window.electronAPI` object. This is the only bridge between the main and renderer processes.
-
-The exposed API:
-
-| Method                | Direction        | Purpose                                        |
-| --------------------- | ---------------- | ---------------------------------------------- |
-| `openFileDialog()`    | Renderer -> Main | Opens native file picker, returns file content |
-| `readHarFile(path)`   | Renderer -> Main | Reads a file by path (used for drag-and-drop)  |
-| `getNativeTheme()`    | Renderer -> Main | Returns current system theme                   |
-| `onHarFileOpened(cb)` | Main -> Renderer | Listener for files opened via Finder/menu      |
-| `onThemeChanged(cb)`  | Main -> Renderer | Listener for system theme changes              |
-
-Each listener method returns an unsubscribe function for cleanup in React `useEffect` hooks.
-
-### Renderer Process (`src/`)
-
-The renderer is a standard React application bundled by Vite. It has no direct access to Node.js APIs -- all OS interaction goes through `window.electronAPI`.
-
-**State management** is handled entirely with React `useState`, `useCallback`, and `useMemo` hooks in `App.tsx`. There is no external state library. The key state:
-
-- `har` -- The parsed HAR object (or null if no file is loaded)
-- `selectedEntry` -- The currently selected request entry
-- `detailPanelOpen` -- Whether the detail panel is visible
-- `filter` -- Active search text and content type filter
-- `sort` -- Current sort column and direction
-
-**Filtering** uses a two-layer approach. The toolbar search input text is parsed into structured filter tokens by `parseFilterQuery()` in `src/utils/filterParser.ts`, then each entry is tested against all tokens by `matchEntry()`. Toolbar button filters (content type, method, status) are applied separately and AND'd with the text filter results. The filter tokens are memoized with `useMemo` so parsing only runs when the search string changes.
-
-**Keyboard navigation** is split between two handlers. Table-scoped shortcuts (arrow keys, j/k, Enter/Space, Home/End, Cmd+Up/Down) are handled by an `onKeyDown` on the table container div in `RequestTable.tsx`. Global shortcuts (Escape, `/`, Cmd+F) are handled by a `document` keydown listener in `App.tsx`. The global handler checks `document.activeElement` to avoid interfering with inputs.
-
-**Data flow for opening a file:**
-
-1. User opens a file (any method)
-2. Main process reads the file from disk via `fs.readFileSync`
-3. Raw JSON string is sent to the renderer via IPC
-4. Renderer calls `parseHar()` which validates and enriches the data
-5. React state updates, triggering a re-render of the request table
-
-## Build Pipeline
-
-The build uses three tools in sequence:
+Netscope is a Tauri 2 app: a Rust shell owning every native concern, and a
+React renderer that never touches the OS directly.
 
 ```
-tsc          ->  vite build  ->  electron-builder
-(type check)    (bundle)        (package native app)
+┌──────────────────────────────────────────────────────────┐
+│ Rust shell (src-tauri/src/)                              │
+│  windows.rs   window mgmt, cascade, dedup, welcome reuse │
+│  menu.rs      native menus (rebuilt on state changes)    │
+│  context_menu.rs  request-row context menu               │
+│  recent.rs    Open Recent + OS recent documents          │
+│  update.rs    prompted auto-update, restore-after-update │
+│  prefs.rs     preferences.json (app-data dir)            │
+│  state.rs     AppState maps                              │
+│  lib.rs       commands, plugins, startup, RunEvents      │
+└───────────────▲──────────────────────────┬───────────────┘
+   #[tauri::command] invocations      events (targetLabel-tagged)
+┌───────────────┴──────────────────────────▼───────────────┐
+│ Renderer (src/)                                          │
+│  platform.ts  the ONLY file importing @tauri-apps/*      │
+│  App.tsx      all application state                      │
+│  components/  presentational components                  │
+│  utils/       pure, tested parsing/filtering/formatting  │
+└──────────────────────────────────────────────────────────┘
 ```
 
-1. **TypeScript** -- Type-checks all source files (no emit, just validation)
-2. **Vite** -- Bundles three separate outputs:
-   - `dist/` -- The React app (HTML, CSS, JS)
-   - `dist-electron/main.js` -- The compiled main process
-   - `dist-electron/preload.js` -- The compiled preload script
-3. **electron-builder** -- Packages everything into native app formats:
-   - **macOS** -- `.app` bundle, `.dmg` installer, `.zip` for auto-updates (arm64 + x64)
-   - **Windows** -- NSIS installer `.exe` (x64)
-   - **Linux** -- `.AppImage` and `.deb` (x64)
+## The platform seam
 
-## Release Pipeline
+`src/platform.ts` exposes named functions (openFileDialog, readHarFile,
+onFileDrop, signalReady, showRequestContextMenu, saveFile, …). Each one
+no-ops when Tauri isn't present, so the renderer runs in a plain browser
+for development (`npx vite`, then `?fixture=/test/fixtures/x.har`).
 
-Releases are built by GitHub Actions (`.github/workflows/release.yml`). Pushing a version tag (`v*`) triggers a matrix build across macOS, Windows, and Linux runners. Each runner builds for its native platform and publishes artifacts to the same GitHub Release. The macOS build signs the app with a Developer ID certificate and notarizes it with Apple (credentials stored as GitHub Actions secrets).
+Commands defined in `lib.rs`: `read_har_file`, `get_window_file`,
+`register_open_file`, `open_file_in_new_window`,
+`open_paths_in_new_windows`, `new_window`, `signal_ready`,
+`show_request_context_menu`, `set_clipboard`, `save_file`.
 
-`electron-updater` handles auto-updates by checking the GitHub Release for `latest-mac.yml`, `latest.yml` (Windows), or `latest-linux.yml` manifests, downloading the update silently, and installing it on next app quit.
+File reads go through `read_har_file` (Rust) rather than the fs plugin:
+plugin scopes only cover dialog-selected paths, but drops, recent files,
+and CLI args hand the app arbitrary paths.
 
-## Security Model
+Events Rust → renderer: `har-file-opened`, `request-open-file`,
+`context-menu-action`, `context-menu-sort`. `emit_to` broadcasts to every
+window in Tauri 2, so payloads carry a `targetLabel` that the renderer
+compares against its own window label (or an `isFocused()` guard for
+`request-open-file`).
 
-The app follows Electron's security best practices:
+## Window lifecycle
 
-- **Context isolation** is enabled (`contextIsolation: true`)
-- **Node integration** is disabled (`nodeIntegration: false`)
-- The renderer has **no direct access** to `fs`, `path`, or any Node.js module
-- All file I/O is handled in the main process and results are passed via IPC
-- The preload script exposes a minimal, typed API surface
+All windows are created from Rust (`windows::create_window`) — none in
+`tauri.conf.json` — so every window gets identical treatment:
+
+- **Hidden until ready:** windows are built with `visible(false)` and shown
+  when the renderer invokes `signal_ready` after parsing and painting
+  (800ms timeout as a safety net). No welcome-screen flash when opening a
+  file, no white flash in dark mode.
+- **Cascade:** 28px down-right from the focused window. Positions are
+  tracked in an explicit map (seeded from our own position hints, updated
+  from `Moved` events) because `outer_position()` fails on Wayland.
+- **Dedup:** `open_files: label → canonical path`. Every open path checks
+  it first and focuses the existing window.
+- **Welcome reuse:** OS-driven opens load into a *focused* empty welcome
+  window (or the sole empty window during launch) instead of leaving one
+  behind. An unfocused welcome window is never taken over.
+- **Pending files:** a file assigned at window creation is stashed in
+  `pending_files` and pulled by the renderer on mount (`get_window_file`),
+  which also makes webview reloads restore the file.
+
+Open paths that all converge on the same logic: the Open dialog
+(multi-select), Open Recent, drag-drop (native paths from
+`onDragDropEvent`), CLI arguments, second launches (single-instance
+handoff on Windows/Linux), and macOS `RunEvent::Opened`.
+
+## Quit model
+
+Windows/Linux exit when the last window closes (Tauri default). On macOS
+`ExitRequested { code: None }` is prevented so the app stays running, and
+`RunEvent::Reopen` (dock click) creates a fresh welcome window.
+
+## Auto-update
+
+See `update.rs`: prompted flow (Install / Remind Me Later / Skip This
+Version) persisted in `preferences.json`, taskbar download progress,
+About-panel status, and restore-open-files across the update restart.
+Stable builds poll `releases/latest/download/latest.json`; nightly builds
+are pointed at a rolling `nightly` release manifest at build time. Linux
+self-update only applies to the AppImage; deb/pacman installs update
+through the package manager.
+
+## Renderer
+
+React 19 + Vite. All state lives in `App.tsx` and flows down as props —
+no external state library. `filteredEntries`/`sortedEntries` are memoized
+so selection changes don't re-filter large captures. The table renders
+every row as real DOM (no virtualization — measured fine at 10k entries
+for interaction; a filter keystroke costs ~500ms there, the accepted
+tradeoff).
+
+Styling is plain CSS on the `--ns-*` token set (`src/styles/tokens.css`,
+the "Instrument" design system). Theme: explicit Light/Dark sets
+`data-theme` on `<html>` before first paint (index.html script + App
+effect); System mode removes the attribute and `prefers-color-scheme`
+decides.

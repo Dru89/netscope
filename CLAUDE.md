@@ -5,20 +5,11 @@ conventions, key commands, testing, keyboard shortcuts, filter syntax, multi-win
 context menus, and the release/auto-update process. Read it before making changes, and keep it
 current when you change the project (it has a "Keeping This File Up to Date" section).
 
-## Active work: Electron → Tauri migration
+Netscope is a Tauri 2 app (Rust shell in `src-tauri/`, React renderer in `src/`). The
+2026 Electron → Tauri migration is complete; the briefs and the "Instrument" visual-redesign
+handoff that drove it are preserved in **[handoff/](handoff/)** for historical context —
+`handoff/claude design handoff/REDESIGN.md` and `netscope-tokens.css` remain the reference
+for the design system now living in `src/styles/tokens.css`.
 
-Netscope is mid-migration from Electron (the shipping app, on `main`) to Tauri (in progress,
-on `nightly` and rewrite branches). The migration briefs and the visual redesign live in
-**[handoff/](handoff/)**:
-
-- `handoff/04-fable5-rewrite-brief.md` — the rewrite brief; **start here for migration work.**
-- `handoff/01-design-philosophy.md` — how the app is meant to behave (shell, windowing, updates).
-- `handoff/02-tauri-migration-status.md` — what's ported to Tauri and what's left.
-- `handoff/05-my-observations-and-suggestions.md` — known bugs, doc drift, and improvement ideas.
-- `handoff/claude design handoff/` — the "Instrument" visual redesign: `netscope-tokens.css`
-  (token set) and `REDESIGN.md` (component spec) are the source of truth; the mockup is a
-  visual reference.
-
-`main` is the behavioral reference for parity. When the Tauri migration reaches parity and
-Electron is removed, update AGENTS.md and `docs/` to describe the Tauri app, and prune whatever
-here is no longer relevant.
+macOS-specific behaviors can't be exercised by the Linux E2E suite; before touching window
+management, file handling, menus, or the updater, read `docs/macos-qa-checklist.md`.

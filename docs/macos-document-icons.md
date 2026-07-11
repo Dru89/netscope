@@ -1,5 +1,13 @@
 # macOS Native Document Icons — Research & Implementation
 
+> **Note (Tauri era):** this research was done against the Electron build,
+> but the findings are about macOS itself and still govern the Tauri app:
+> the `.har` UTI must be declared **without** any icon reference
+> (`UTTypeIconFile` / `CFBundleTypeIconFile`) or macOS renders that file
+> instead of generating the native page-curl document icon. Verify the
+> bundled app's Info.plist against the "Test 1" configuration below
+> whenever `bundle.fileAssociations` changes.
+
 ## Problem
 
 Netscope declares `.har` as a custom document type, but macOS was showing the pre-rendered `har-icon.icns` file as the full icon instead of generating the native Big Sur+ document shape (white page with folded corner, app icon badge, extension label).
