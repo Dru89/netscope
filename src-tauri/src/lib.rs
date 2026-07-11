@@ -54,7 +54,7 @@ fn open_file_in_new_window(
     if let Ok(resolved) = std::fs::canonicalize(&file_path) {
         if let Some(label) = state.find_window_for_file(&resolved) {
             if let Some(window) = app.get_webview_window(&label) {
-                return window.set_focus().map_err(Into::into);
+                return window.set_focus();
             }
         }
     }
