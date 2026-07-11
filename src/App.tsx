@@ -91,10 +91,14 @@ function App() {
     return cleanup;
   }, [loadHarContent]);
 
-  // Load file pre-assigned to this window (CLI arg or file association)
+  // Load file pre-assigned to this window (CLI arg or file association),
+  // then signal ready — windows are created hidden and shown on this signal
+  // so file windows never flash the welcome screen (welcome windows show as
+  // soon as they've painted).
   useEffect(() => {
     void platform.getWindowFile().then((data) => {
       if (data) loadHarContent(data.content, data.fileName);
+      platform.signalReady();
     });
   }, [loadHarContent]);
 

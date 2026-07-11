@@ -18,13 +18,23 @@ const isTauri = () =>
 
 export async function openFileDialog(): Promise<HarFileData | null> {
   if (isElectron()) return window.electronAPI.openFileDialog();
+  if (!isTauri()) return null;
 
-  const filePath = await dialogOpen({
-    multiple: false,
-    filters: [{ name: "HAR Files", extensions: ["har"] }],
+  const selection = await dialogOpen({
+    multiple: true,
+    filters: [
+      { name: "HAR Files", extensions: ["har"] },
+      { name: "All Files", extensions: ["*"] },
+    ],
   });
-  if (!filePath || typeof filePath !== "string") return null;
-  return readHarFile(filePath);
+  if (!selection) return null;
+  const paths = Array.isArray(selection) ? selection : [selection];
+  // First file loads into the calling window (via the return value);
+  // any additional selections open their own windows, deduped in Rust.
+  if (paths.length > 1) {
+    void invoke("open_paths_in_new_windows", { paths: paths.slice(1) });
+  }
+  return readHarFile(paths[0]);
 }
 
 // Reads through Rust rather than the fs plugin: the plugin's scope only
@@ -34,6 +44,7 @@ export async function readHarFile(
   filePath: string,
 ): Promise<HarFileData | null> {
   if (isElectron()) return window.electronAPI.readHarFile(filePath);
+  if (!isTauri()) return null;
 
   return invoke<HarFileData | null>("read_har_file", { path: filePath });
 }
@@ -77,21 +88,27 @@ export async function setThemeMode(
   mode: "system" | "light" | "dark",
 ): Promise<void> {
   if (isElectron()) return window.electronAPI.setThemeMode(mode);
+  if (!isTauri()) return;
 
   await getCurrentWindow().setTheme(mode === "system" ? null : mode);
 }
 
 export async function setWindowTitle(title: string): Promise<void> {
   if (isElectron()) return; // Electron main process sets the title
+  if (!isTauri()) return;
   await getCurrentWindow().setTitle(title);
 }
 
+// Signals that the renderer has parsed and painted its content. Windows are
+// created hidden and shown on this signal (or a timeout) so opening a file
+// never flashes the welcome screen.
 export function signalReady(): void {
   if (isElectron()) {
     window.electronAPI.signalReady();
     return;
   }
-  void getCurrentWindow().show();
+  if (!isTauri()) return;
+  void invoke("signal_ready");
 }
 
 export function showRequestContextMenu(_data: unknown): void {
@@ -106,12 +123,20 @@ export function onHarFileOpened(
   callback: (data: HarFileData) => void,
 ): () => void {
   if (isElectron()) return window.electronAPI.onHarFileOpened(callback);
+  if (!isTauri()) return () => {};
 
-  // Phase 2: Rust emits 'har-file-opened' for file associations on macOS
+  // Rust emits this when it loads a file into an existing window (welcome-
+  // window reuse for OS opens). The payload carries a target label because
+  // emit_to still broadcasts to every window — ignore other windows' files.
   let unlisten: (() => void) | undefined;
-  listen<HarFileData>("har-file-opened", (event) => {
-    callback(event.payload);
-  }).then((fn) => {
+  listen<HarFileData & { targetLabel?: string }>(
+    "har-file-opened",
+    (event) => {
+      const { targetLabel } = event.payload;
+      if (targetLabel && targetLabel !== getCurrentWindow().label) return;
+      callback(event.payload);
+    },
+  ).then((fn) => {
     unlisten = fn;
   });
   return () => unlisten?.();
@@ -119,21 +144,22 @@ export function onHarFileOpened(
 
 // Fetch the file pre-assigned to this window on startup (CLI arg or file association).
 export async function getWindowFile(): Promise<HarFileData | null> {
-  if (isElectron()) return null;
+  if (!isTauri()) return null;
   return invoke<HarFileData | null>("get_window_file");
 }
 
 // Tell Rust which file this window has loaded, for dedup when another window
-// tries to open the same file.
+// tries to open the same file (also updates the recent-files list and the
+// macOS proxy icon).
 export async function registerOpenFile(filePath: string): Promise<void> {
-  if (isElectron()) return;
+  if (!isTauri()) return;
   return invoke("register_open_file", { filePath });
 }
 
 // Open a file in a new window. If the file is already open somewhere, focuses
 // that window instead.
 export async function openFileInNewWindow(data: HarFileData): Promise<void> {
-  if (isElectron()) return;
+  if (!isTauri()) return;
   return invoke("open_file_in_new_window", {
     filePath: data.filePath,
     content: data.content,
@@ -141,18 +167,8 @@ export async function openFileInNewWindow(data: HarFileData): Promise<void> {
   });
 }
 
-export async function newWindow(): Promise<void> {
-  if (isElectron()) return;
-  return invoke("new_window");
-}
-
-export async function closeWindow(): Promise<void> {
-  if (isElectron()) return;
-  await getCurrentWindow().close();
-}
-
 export function onRequestOpenFile(callback: () => void): () => void {
-  if (isElectron()) return () => {};
+  if (isElectron() || !isTauri()) return () => {};
   let unlisten: (() => void) | undefined;
   // Tauri 2's emit_to(EventTarget::WebviewWindow) still broadcasts to all
   // windows, so every window receives this event. Guard with isFocused() so
@@ -171,6 +187,7 @@ export function onContextMenuSort(
   callback: (sort: { field: string; direction: string }) => void,
 ): () => void {
   if (isElectron()) return window.electronAPI.onContextMenuSort(callback);
+  if (!isTauri()) return () => {};
 
   // Phase 2: Rust emits 'context-menu-sort' from native context menu
   let unlisten: (() => void) | undefined;

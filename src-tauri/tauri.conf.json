@@ -10,16 +10,7 @@
     "beforeBuildCommand": "npm run build:vite"
   },
   "app": {
-    "windows": [
-      {
-        "label": "main",
-        "title": "Netscope",
-        "width": 1400,
-        "height": 900,
-        "resizable": true,
-        "fullscreen": false
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": null
     }

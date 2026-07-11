@@ -7,10 +7,8 @@
   ],
   "permissions": [
     "core:default",
-    "core:window:allow-close",
     "core:window:allow-set-title",
-    "core:window:allow-set-focus",
-    "core:window:allow-show",
+    "core:window:allow-set-theme",
     "dialog:allow-open"
   ]
 }
