@@ -10,6 +10,10 @@ on `main`, the abandoned Tauri migration on `nightly`, the git history, and the 
 - **[03-claude-design-brief.md](03-claude-design-brief.md)** → give this to **Claude Design**.
   A visual/component redesign brief. Pair it with the screenshots listed inside it
   (they're good input — clean, current except one stale label, and cover every surface).
+  For pasting straight into a tool that can't resolve the repo's relative links, use the
+  **[standalone variant](03-claude-design-brief-standalone.md)** instead: it folds in the
+  relevant design philosophy and reframes every screenshot reference as "attached," so it's
+  one paste plus the eight image attachments with nothing dangling.
 
 - **[04-fable5-rewrite-brief.md](04-fable5-rewrite-brief.md)** → give this to **Fable 5**.
   A full refactor/rewrite brief targeting Tauri, with bug-fix / perf / general-improvement
