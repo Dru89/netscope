@@ -64,7 +64,7 @@ impl AppState {
     }
 }
 
-fn read_har_file(path: &str) -> Option<HarFileData> {
+fn load_har_file(path: &str) -> Option<HarFileData> {
     let resolved = std::fs::canonicalize(path).ok()?;
     let content = std::fs::read_to_string(&resolved).ok()?;
     let file_name = resolved
@@ -218,6 +218,14 @@ fn create_window(app: &tauri::AppHandle, file: Option<HarFileData>) -> tauri::Re
     Ok(())
 }
 
+// Read a HAR file for the frontend. This deliberately bypasses the fs-plugin
+// scope: drops, recent files, and CLI args hand the app arbitrary paths, and
+// a local file viewer must be able to read whatever the OS gives it.
+#[tauri::command]
+fn read_har_file(path: String) -> Option<HarFileData> {
+    load_har_file(&path)
+}
+
 // Called by each window's frontend on mount to get any pre-assigned file.
 #[tauri::command]
 fn get_window_file(window: tauri::WebviewWindow) -> Option<HarFileData> {
@@ -272,14 +280,25 @@ fn new_window(app: tauri::AppHandle) -> tauri::Result<()> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // WebKitGTK's DMA-BUF renderer crashes at startup on the NVIDIA
+    // proprietary driver under Wayland ("Error 71 (Protocol error)
+    // dispatching to Wayland display", reproduced on KDE Plasma + RTX 4080).
+    // Disable it only there, and never override the user's own setting.
+    #[cfg(target_os = "linux")]
+    if std::path::Path::new("/proc/driver/nvidia").exists()
+        && std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none()
+    {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+
     // On Linux/Windows, files opened via file association arrive as argv[1].
     // On macOS this comes through the AppDelegate openFile: path (Phase 2).
-    let startup_file = std::env::args().nth(1).and_then(|p| read_har_file(&p));
+    let startup_file = std::env::args().nth(1).and_then(|p| load_har_file(&p));
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
+            read_har_file,
             get_window_file,
             register_open_file,
             open_file_in_new_window,

@@ -11,7 +11,6 @@
     "core:window:allow-set-title",
     "core:window:allow-set-focus",
     "core:window:allow-show",
-    "dialog:allow-open",
-    "fs:allow-read-text-file"
+    "dialog:allow-open"
   ]
 }
