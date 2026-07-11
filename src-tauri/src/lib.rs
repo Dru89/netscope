@@ -113,6 +113,21 @@ fn set_clipboard(app: tauri::AppHandle, text: String) {
     let _ = app.clipboard().write_text(text);
 }
 
+// Write a response body to a path the user picked in the save dialog
+// (Response tab → Save As…). base64 marks binary bodies (e.g. images).
+#[tauri::command]
+fn save_file(path: String, contents: String, base64: bool) -> Result<(), String> {
+    let bytes = if base64 {
+        use base64::Engine;
+        base64::engine::general_purpose::STANDARD
+            .decode(contents.trim())
+            .map_err(|e| e.to_string())?
+    } else {
+        contents.into_bytes()
+    };
+    std::fs::write(&path, bytes).map_err(|e| e.to_string())
+}
+
 fn find_har_arg(args: impl Iterator<Item = String>) -> Option<String> {
     args.skip(1)
         .find(|arg| arg.ends_with(".har") && std::path::Path::new(arg).exists())
@@ -169,6 +184,7 @@ pub fn run() {
             signal_ready,
             show_request_context_menu,
             set_clipboard,
+            save_file,
         ])
         .setup(move |app| {
             app.manage(AppState::new());

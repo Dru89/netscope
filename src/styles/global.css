@@ -1,119 +1,20 @@
-/* System theme: light by default, dark when macOS is in dark mode */
+/* Base styles for the "Instrument" redesign. All colors and sizes come from
+   the --ns-* custom properties in tokens.css (the design source of truth) —
+   no color literals belong in this file or app.css. Theming: explicit
+   Light/Dark sets data-theme on <html> (before first paint, via the
+   index.html script); System mode leaves it unset so prefers-color-scheme
+   decides. */
+
+/* macOS uses a hidden inset title bar with traffic lights, so the content
+   area needs top padding to avoid overlapping them. On Windows and Linux the
+   system title bar handles this. data-platform is set on <html> before
+   first paint. */
 :root {
-  /* Colors - Light theme */
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f5f5f5;
-  --color-bg-tertiary: #eaeaea;
-  --color-bg-hover: #f0f0f0;
-  --color-bg-selected: #e3f2fd;
-  --color-bg-toolbar: #f8f8f8;
-  --color-bg-panel: #ffffff;
-  --color-bg-input: #ffffff;
-  --color-bg-code: #f5f5f5;
-  --color-bg-badge: #e0e0e0;
-
-  --color-border: #d0d0d0;
-  --color-border-light: #e5e5e5;
-  --color-border-focus: #2196f3;
-
-  --color-text-primary: #1a1a1a;
-  --color-text-secondary: #666666;
-  --color-text-tertiary: #999999;
-  --color-text-link: #1976d2;
-  --color-text-inverse: #ffffff;
-
-  --color-status-success: #2e7d32;
-  --color-status-redirect: #ed6c02;
-  --color-status-client-error: #d32f2f;
-  --color-status-server-error: #c62828;
-  --color-status-error: #b71c1c;
-
-  --color-method-get: #1976d2;
-  --color-method-post: #2e7d32;
-  --color-method-put: #ed6c02;
-  --color-method-delete: #d32f2f;
-  --color-method-patch: #7b1fa2;
-
-  --color-timing-blocked: #b0bec5;
-  --color-timing-queueing: #90a4ae;
-  --color-timing-dns: #80cbc4;
-  --color-timing-connect: #ffb74d;
-  --color-timing-ssl: #ba68c8;
-  --color-timing-send: #4fc3f7;
-  --color-timing-wait: #81c784;
-  --color-timing-receive: #64b5f6;
-
-  --color-type-document: #1976d2;
-  --color-type-stylesheet: #7b1fa2;
-  --color-type-script: #f9a825;
-  --color-type-image: #2e7d32;
-  --color-type-font: #e65100;
-  --color-type-xhr: #00838f;
-  --color-type-other: #757575;
-
-  --color-accent: #1976d2;
-  --color-accent-hover: #1565c0;
-
-  /* Sizing */
   --titlebar-height: 0px;
-  --toolbar-height: 40px;
-  --summary-height: 32px;
-  --font-mono: "SF Mono", "Menlo", "Monaco", "Consolas", monospace;
-  --font-sans:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial,
-    sans-serif;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
 }
 
-/* macOS uses a hidden inset title bar with traffic lights, so the
-   content area needs top padding to avoid overlapping them. On
-   Windows and Linux the system title bar handles this. The platform
-   is set as a data attribute on <html> from the preload script. */
 :root[data-platform="darwin"] {
-  --titlebar-height: 52px;
-}
-
-/* Dark theme */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg-primary: #1e1e1e;
-    --color-bg-secondary: #252526;
-    --color-bg-tertiary: #2d2d30;
-    --color-bg-hover: #2a2d2e;
-    --color-bg-selected: #094771;
-    --color-bg-toolbar: #252526;
-    --color-bg-panel: #1e1e1e;
-    --color-bg-input: #3c3c3c;
-    --color-bg-code: #2d2d30;
-    --color-bg-badge: #404040;
-
-    --color-border: #404040;
-    --color-border-light: #333333;
-    --color-border-focus: #007acc;
-
-    --color-text-primary: #cccccc;
-    --color-text-secondary: #999999;
-    --color-text-tertiary: #666666;
-    --color-text-link: #4fc3f7;
-    --color-text-inverse: #1e1e1e;
-
-    --color-status-success: #4caf50;
-    --color-status-redirect: #ff9800;
-    --color-status-client-error: #ef5350;
-    --color-status-server-error: #e53935;
-    --color-status-error: #d32f2f;
-
-    --color-method-get: #4fc3f7;
-    --color-method-post: #81c784;
-    --color-method-put: #ffb74d;
-    --color-method-delete: #ef5350;
-    --color-method-patch: #ce93d8;
-
-    --color-accent: #007acc;
-    --color-accent-hover: #0098ff;
-  }
+  --titlebar-height: var(--ns-inset-macos);
 }
 
 * {
@@ -130,10 +31,10 @@ body,
 }
 
 body {
-  font-family: var(--font-sans);
-  font-size: 12px;
-  color: var(--color-text-primary);
-  background: var(--color-bg-primary);
+  font-family: var(--ns-font-ui);
+  font-size: var(--ns-size-base);
+  color: var(--ns-text);
+  background: var(--ns-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   user-select: none;
@@ -150,12 +51,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
+  background: var(--ns-hairline);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-tertiary);
+  background: var(--ns-text-faint);
 }
 
 ::-webkit-scrollbar-corner {
@@ -164,7 +65,7 @@ body {
 
 /* Utility classes */
 .mono {
-  font-family: var(--font-mono);
+  font-family: var(--ns-font-mono);
 }
 
 .truncate {
@@ -175,6 +76,6 @@ body {
 
 /* Selection */
 ::selection {
-  background: var(--color-accent);
-  color: var(--color-text-inverse);
+  background: var(--ns-accent);
+  color: var(--ns-surface);
 }

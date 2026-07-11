@@ -7,6 +7,7 @@ import {
   getStatusColor,
   getMethodColor,
   getContentType,
+  getEntryName,
   getTransferSize,
   getResourceSize,
   computeTimingOffsets,
@@ -14,6 +15,21 @@ import {
   detectLanguage,
   isFromCache,
 } from "../utils/har";
+import { highlightJson } from "../utils/highlightJson";
+import * as platform from "../platform";
+
+// A key/value cell that clamps long values to 3 lines and expands on click.
+function ClampedValue({ children }: { children: React.ReactNode }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <td
+      className={`clamped-value ${expanded ? "expanded" : ""}`}
+      onClick={() => setExpanded((v) => !v)}
+    >
+      {children}
+    </td>
+  );
+}
 
 interface DetailPanelProps {
   entry: HarEntry;
@@ -166,7 +182,7 @@ function HeadersTab({ entry }: { entry: HarEntry }) {
               {entry.response.headers.map((header, i) => (
                 <tr key={i}>
                   <td>{header.name}</td>
-                  <td>{header.value}</td>
+                  <ClampedValue>{header.value}</ClampedValue>
                 </tr>
               ))}
             </tbody>
@@ -185,7 +201,7 @@ function HeadersTab({ entry }: { entry: HarEntry }) {
               {entry.request.headers.map((header, i) => (
                 <tr key={i}>
                   <td>{header.name}</td>
-                  <td>{header.value}</td>
+                  <ClampedValue>{header.value}</ClampedValue>
                 </tr>
               ))}
             </tbody>
@@ -212,7 +228,7 @@ function PayloadTab({ entry }: { entry: HarEntry }) {
               {queryParams.map((param, i) => (
                 <tr key={i}>
                   <td>{param.name}</td>
-                  <td>{param.value}</td>
+                  <ClampedValue>{param.value}</ClampedValue>
                 </tr>
               ))}
             </tbody>
@@ -227,7 +243,7 @@ function PayloadTab({ entry }: { entry: HarEntry }) {
             <p
               style={{
                 fontSize: 11,
-                color: "var(--color-text-tertiary)",
+                color: "var(--ns-text-faint)",
                 marginBottom: 8,
               }}
             >
@@ -268,25 +284,98 @@ function ResponseTab({ entry }: { entry: HarEntry }) {
   const content = entry.response.content;
   const mimeType = content.mimeType || "";
   const text = content.text || "";
-  const language = detectLanguage(mimeType);
+  const isJson = detectLanguage(mimeType) === "json";
+  const isImage = mimeType.startsWith("image/");
 
-  // Check if it's an image
-  if (mimeType.startsWith("image/")) {
+  const [mode, setMode] = useState<"pretty" | "raw">("pretty");
+  const [showRawImage, setShowRawImage] = useState(false);
+  const [imageDims, setImageDims] = useState<string | null>(null);
+
+  const displayText =
+    isJson && mode === "pretty" ? prettyPrintJson(text) : text;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(displayText);
+  };
+
+  const handleSaveAs = () => {
+    const name = getEntryName(entry) || "response";
+    void platform.saveFile(name, text, content.encoding === "base64");
+  };
+
+  const metaStrip = (
+    <div className="response-meta">
+      <span className="response-meta-info">
+        {mimeType || "unknown"}
+        <span className="response-meta-sep">·</span>
+        {formatBytes(content.size)}
+        {imageDims && (
+          <>
+            <span className="response-meta-sep">·</span>
+            {imageDims}
+          </>
+        )}
+      </span>
+      <span className="response-meta-actions">
+        {isJson && text && (
+          <span className="segmented-switch">
+            <button
+              className={mode === "pretty" ? "active" : ""}
+              onClick={() => setMode("pretty")}
+            >
+              Pretty
+            </button>
+            <button
+              className={mode === "raw" ? "active" : ""}
+              onClick={() => setMode("raw")}
+            >
+              Raw
+            </button>
+          </span>
+        )}
+        {text && (
+          <>
+            <button className="ghost-btn" onClick={handleCopy}>
+              Copy
+            </button>
+            <button className="ghost-btn" onClick={handleSaveAs}>
+              Save As…
+            </button>
+          </>
+        )}
+      </span>
+    </div>
+  );
+
+  if (isImage) {
     if (content.encoding === "base64" && text) {
       return (
         <div className="detail-section">
-          <div className="detail-section-title">Response Body</div>
-          <img
-            className="image-preview"
-            src={`data:${mimeType};base64,${text}`}
-            alt="Response"
-          />
+          {metaStrip}
+          <div className="image-preview-board">
+            <img
+              className="image-preview"
+              src={`data:${mimeType};base64,${text}`}
+              alt="Response"
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                setImageDims(`${img.naturalWidth}×${img.naturalHeight}`);
+              }}
+            />
+          </div>
+          <button
+            className="show-raw-link"
+            onClick={() => setShowRawImage((v) => !v)}
+          >
+            {showRawImage ? "Hide raw data" : "Show raw data"}
+          </button>
+          {showRawImage && <div className="code-preview">{text}</div>}
         </div>
       );
     }
     return (
       <div className="detail-section">
-        <div className="detail-section-title">Response Body</div>
+        {metaStrip}
         <div className="no-content">
           Image response ({formatBytes(content.size)})
         </div>
@@ -307,14 +396,17 @@ function ResponseTab({ entry }: { entry: HarEntry }) {
     );
   }
 
-  const displayText = language === "json" ? prettyPrintJson(text) : text;
-
   return (
     <div className="detail-section">
-      <div className="detail-section-title">
-        Response Body ({formatBytes(content.size)})
-      </div>
-      <div className="code-preview">{displayText}</div>
+      {metaStrip}
+      {isJson && mode === "pretty" ? (
+        <div
+          className="code-preview code-json"
+          dangerouslySetInnerHTML={{ __html: highlightJson(displayText) }}
+        />
+      ) : (
+        <div className="code-preview">{displayText}</div>
+      )}
     </div>
   );
 }
@@ -335,10 +427,13 @@ function TimingTab({ entry }: { entry: HarEntry }) {
                 style={{ background: phase.color }}
               />
               <span className="timing-label">{phase.name}</span>
-              <div className="timing-bar-bg">
+              <div className="timing-track">
                 <div
                   className="timing-bar-fill"
                   style={{
+                    // Positioned on the request's own 0–100% duration, so
+                    // the phases read as a sequence, not a bar chart
+                    left: `${totalTime > 0 ? (phase.start / totalTime) * 100 : 0}%`,
                     width: `${totalTime > 0 ? (phase.duration / totalTime) * 100 : 0}%`,
                     background: phase.color,
                   }}
@@ -349,31 +444,33 @@ function TimingTab({ entry }: { entry: HarEntry }) {
           ))}
           <div className="timing-total">
             <span>Total</span>
-            <span className="mono">{formatTime(totalTime)}</span>
+            <span className="timing-total-value">{formatTime(totalTime)}</span>
           </div>
         </div>
       </div>
 
-      {/* Raw timing data */}
+      {/* Raw timing data — HAR field names verbatim */}
       <div className="detail-section">
         <div className="detail-section-title">Raw Timing Data</div>
-        <table className="detail-table">
-          <tbody>
-            {Object.entries(entry.timings).map(([key, value]) => {
-              if (key === "comment") return null;
-              return (
-                <tr key={key}>
-                  <td>{key}</td>
-                  <td>
-                    {typeof value === "number" && value >= 0
-                      ? formatTime(value)
-                      : "-"}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="timing-raw-card">
+          <table className="detail-table">
+            <tbody>
+              {Object.entries(entry.timings).map(([key, value]) => {
+                if (key === "comment") return null;
+                return (
+                  <tr key={key}>
+                    <td>{key}</td>
+                    <td>
+                      {typeof value === "number" && value >= 0
+                        ? formatTime(value)
+                        : "-"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -399,7 +496,7 @@ function CookiesTab({ entry }: { entry: HarEntry }) {
               {requestCookies.map((cookie, i) => (
                 <tr key={i}>
                   <td>{cookie.name}</td>
-                  <td>{cookie.value}</td>
+                  <ClampedValue>{cookie.value}</ClampedValue>
                 </tr>
               ))}
             </tbody>
@@ -420,25 +517,25 @@ function CookiesTab({ entry }: { entry: HarEntry }) {
                   <td>
                     {cookie.value}
                     {cookie.domain && (
-                      <span style={{ color: "var(--color-text-tertiary)" }}>
+                      <span style={{ color: "var(--ns-text-faint)" }}>
                         {" "}
                         (Domain: {cookie.domain})
                       </span>
                     )}
                     {cookie.path && (
-                      <span style={{ color: "var(--color-text-tertiary)" }}>
+                      <span style={{ color: "var(--ns-text-faint)" }}>
                         {" "}
                         (Path: {cookie.path})
                       </span>
                     )}
                     {cookie.httpOnly && (
-                      <span style={{ color: "var(--color-text-tertiary)" }}>
+                      <span style={{ color: "var(--ns-text-faint)" }}>
                         {" "}
                         HttpOnly
                       </span>
                     )}
                     {cookie.secure && (
-                      <span style={{ color: "var(--color-text-tertiary)" }}>
+                      <span style={{ color: "var(--ns-text-faint)" }}>
                         {" "}
                         Secure
                       </span>

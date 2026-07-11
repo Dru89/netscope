@@ -132,27 +132,28 @@ export function formatTimestamp(dateString: string): string {
 }
 
 export function getStatusColor(status: number): string {
-  if (status === 0) return "var(--color-status-error)";
-  if (status < 300) return "var(--color-status-success)";
-  if (status < 400) return "var(--color-status-redirect)";
-  if (status < 500) return "var(--color-status-client-error)";
-  return "var(--color-status-server-error)";
+  // Status 0 (network error) renders as 4xx per the design spec
+  if (status === 0) return "var(--ns-status-4xx)";
+  if (status < 300) return "var(--ns-status-2xx)";
+  if (status < 400) return "var(--ns-status-3xx)";
+  if (status < 500) return "var(--ns-status-4xx)";
+  return "var(--ns-status-5xx)";
 }
 
 export function getMethodColor(method: string): string {
   switch (method.toUpperCase()) {
     case "GET":
-      return "var(--color-method-get)";
+      return "var(--ns-method-get)";
     case "POST":
-      return "var(--color-method-post)";
+      return "var(--ns-method-post)";
     case "PUT":
-      return "var(--color-method-put)";
+      return "var(--ns-method-put)";
     case "DELETE":
-      return "var(--color-method-delete)";
+      return "var(--ns-method-delete)";
     case "PATCH":
-      return "var(--color-method-patch)";
+      return "var(--ns-method-patch)";
     default:
-      return "var(--color-text-secondary)";
+      return "var(--ns-text-muted)";
   }
 }
 
@@ -174,7 +175,7 @@ export function computeTimingOffsets(entry: HarEntry) {
         name: "Queueing",
         start: offset,
         duration: queueing,
-        color: "var(--color-timing-queueing)",
+        color: "var(--ns-phase-blocked)",
       });
       offset += queueing;
       const stalled = timings.blocked - queueing;
@@ -183,7 +184,7 @@ export function computeTimingOffsets(entry: HarEntry) {
           name: "Stalled",
           start: offset,
           duration: stalled,
-          color: "var(--color-timing-blocked)",
+          color: "var(--ns-phase-blocked)",
         });
         offset += stalled;
       }
@@ -192,7 +193,7 @@ export function computeTimingOffsets(entry: HarEntry) {
         name: "Blocked",
         start: offset,
         duration: timings.blocked,
-        color: "var(--color-timing-blocked)",
+        color: "var(--ns-phase-blocked)",
       });
       offset += timings.blocked;
     }
@@ -203,7 +204,7 @@ export function computeTimingOffsets(entry: HarEntry) {
       name: "DNS",
       start: offset,
       duration: timings.dns,
-      color: "var(--color-timing-dns)",
+      color: "var(--ns-phase-dns)",
     });
     offset += timings.dns;
   }
@@ -217,7 +218,7 @@ export function computeTimingOffsets(entry: HarEntry) {
           name: "Connect",
           start: offset,
           duration: tcpOnly,
-          color: "var(--color-timing-connect)",
+          color: "var(--ns-phase-connect)",
         });
         offset += tcpOnly;
       }
@@ -225,7 +226,7 @@ export function computeTimingOffsets(entry: HarEntry) {
         name: "TLS",
         start: offset,
         duration: timings.ssl,
-        color: "var(--color-timing-ssl)",
+        color: "var(--ns-phase-ssl)",
       });
       offset += timings.ssl;
     } else {
@@ -233,7 +234,7 @@ export function computeTimingOffsets(entry: HarEntry) {
         name: "Connect",
         start: offset,
         duration: timings.connect,
-        color: "var(--color-timing-connect)",
+        color: "var(--ns-phase-connect)",
       });
       offset += timings.connect;
     }
@@ -244,7 +245,7 @@ export function computeTimingOffsets(entry: HarEntry) {
       name: "Send",
       start: offset,
       duration: timings.send,
-      color: "var(--color-timing-send)",
+      color: "var(--ns-phase-send)",
     });
     offset += timings.send;
   }
@@ -254,7 +255,7 @@ export function computeTimingOffsets(entry: HarEntry) {
       name: "Wait (TTFB)",
       start: offset,
       duration: timings.wait,
-      color: "var(--color-timing-wait)",
+      color: "var(--ns-phase-wait)",
     });
     offset += timings.wait;
   }
@@ -264,7 +265,7 @@ export function computeTimingOffsets(entry: HarEntry) {
       name: "Receive",
       start: offset,
       duration: timings.receive,
-      color: "var(--color-timing-receive)",
+      color: "var(--ns-phase-receive)",
     });
     offset += timings.receive;
   }

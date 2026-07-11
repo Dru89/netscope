@@ -335,18 +335,25 @@ export function RequestTable({
                 </td>
                 <td className="col-waterfall">
                   <div className="waterfall-cell">
-                    <div className="waterfall-bar-container">
+                    {/* One bar spanning the request's duration on the shared
+                        capture timeline; phase segments butt-join inside it
+                        so the rounded ends clip cleanly. */}
+                    <div
+                      className="waterfall-bar"
+                      style={{
+                        left: `${(startOffset / totalDuration) * 100}%`,
+                        width: `${Math.max((entry.time / totalDuration) * 100, 0.2)}%`,
+                      }}
+                    >
                       {phases.map((phase, i) => {
-                        const left =
-                          ((startOffset + phase.start) / totalDuration) * 100;
-                        const width = (phase.duration / totalDuration) * 100;
+                        const requestTime = entry.time || 1;
                         return (
                           <div
                             key={i}
-                            className="waterfall-bar"
+                            className="waterfall-seg"
                             style={{
-                              left: `${left}%`,
-                              width: `${Math.max(width, 0.2)}%`,
+                              left: `${(phase.start / requestTime) * 100}%`,
+                              width: `${(phase.duration / requestTime) * 100}%`,
                               background: phase.color,
                             }}
                             title={`${phase.name}: ${formatTime(phase.duration)}`}

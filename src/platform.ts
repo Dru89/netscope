@@ -1,4 +1,4 @@
-import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
+import { open as dialogOpen, save as dialogSave } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { listen } from "@tauri-apps/api/event";
@@ -253,6 +253,30 @@ export async function openFileInNewWindow(data: HarFileData): Promise<void> {
     content: data.content,
     fileName: data.fileName,
   });
+}
+
+// Save text (or base64-encoded binary) to a user-chosen location.
+// Tauri: native save dialog + Rust write. Elsewhere: browser download.
+export async function saveFile(
+  suggestedName: string,
+  contents: string,
+  base64 = false,
+): Promise<void> {
+  if (isTauri()) {
+    const path = await dialogSave({ defaultPath: suggestedName });
+    if (!path) return;
+    await invoke("save_file", { path, contents, base64 });
+    return;
+  }
+  const bytes = base64
+    ? Uint8Array.from(atob(contents.trim()), (c) => c.charCodeAt(0))
+    : new TextEncoder().encode(contents);
+  const blob = new Blob([bytes]);
+  const anchor = document.createElement("a");
+  anchor.href = URL.createObjectURL(blob);
+  anchor.download = suggestedName;
+  anchor.click();
+  URL.revokeObjectURL(anchor.href);
 }
 
 export function onRequestOpenFile(callback: () => void): () => void {

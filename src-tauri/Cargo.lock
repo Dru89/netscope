@@ -2389,6 +2389,7 @@ dependencies = [
 name = "netscope"
 version = "4.0.0"
 dependencies = [
+ "base64 0.22.1",
  "gtk",
  "log",
  "objc2",

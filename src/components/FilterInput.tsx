@@ -166,26 +166,36 @@ export function FilterInput({
       />
       {isOpen && suggestions.length > 0 && (
         <div className="filter-suggestions-dropdown" ref={dropdownRef}>
-          {suggestions.map((suggestion, index) => (
-            <div
-              key={`${suggestion.label}-${index}`}
-              className={`filter-suggestion-item ${index === selectedIndex ? "selected" : ""}`}
-              onMouseDown={(e) => {
-                e.preventDefault(); // Prevent blur
-                acceptSuggestion(suggestion);
-              }}
-              onMouseEnter={() => setSelectedIndex(index)}
-            >
-              <span className="filter-suggestion-label">
-                {suggestion.label}
-              </span>
-              {suggestion.description && (
-                <span className="filter-suggestion-description">
-                  {suggestion.description}
+          <div className="filter-suggestions-list">
+            {suggestions.map((suggestion, index) => (
+              <div
+                key={`${suggestion.label}-${index}`}
+                className={`filter-suggestion-item ${index === selectedIndex ? "selected" : ""}`}
+                onMouseDown={(e) => {
+                  e.preventDefault(); // Prevent blur
+                  acceptSuggestion(suggestion);
+                }}
+                onMouseEnter={() => setSelectedIndex(index)}
+              >
+                <span className="filter-suggestion-label">
+                  {suggestion.label}
                 </span>
-              )}
-            </div>
-          ))}
+                {suggestion.description && (
+                  <span className="filter-suggestion-description">
+                    {suggestion.description}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="filter-suggestions-footer">
+            <kbd>↑</kbd>
+            <kbd>↓</kbd>
+            <span>navigate</span>
+            <span className="filter-footer-sep">·</span>
+            <kbd>⏎</kbd>
+            <span>apply</span>
+          </div>
         </div>
       )}
     </>

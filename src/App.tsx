@@ -125,6 +125,19 @@ function App() {
     return platform.onRequestOpenFile(() => void handleOpenFile());
   }, [handleOpenFile]);
 
+  // Dev-only: load a fixture over HTTP in plain-browser dev, e.g.
+  // http://localhost:5173/?fixture=/test/fixtures/www.example.com.har
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const fixture = new URLSearchParams(window.location.search).get("fixture");
+    if (!fixture) return;
+    void fetch(fixture)
+      .then((res) => res.text())
+      .then((text) =>
+        loadHarContent(text, fixture.split("/").pop() ?? fixture),
+      );
+  }, [loadHarContent]);
+
   // Handle drag and drop (DOM path: Electron + plain-browser dev).
   // Under Tauri the native drag-drop channel delivers drops instead — with
   // real filesystem paths — via platform.onFileDrop below.

@@ -58,17 +58,10 @@ export function Toolbar({
       <span className="toolbar-file-name" title={fileName}>
         {fileName}
       </span>
-      <span className="toolbar-count">
-        {hasFilter ? (
-          `${filteredEntries} / ${totalEntries} requests`
-        ) : (
-          <>
-            <span className="toolbar-count-placeholder">
-              {`${totalEntries} / `}
-            </span>
-            {`${totalEntries} requests`}
-          </>
-        )}
+      <span className={`toolbar-count ${hasFilter ? "filtered" : ""}`}>
+        {hasFilter
+          ? `${filteredEntries} / ${totalEntries}`
+          : `${totalEntries} requests`}
       </span>
       <div className="toolbar-search">
         <span className="toolbar-search-icon">
