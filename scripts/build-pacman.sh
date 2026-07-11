@@ -12,7 +12,10 @@ set -euo pipefail
 
 DEB="$1"
 VERSION="$2"
-OUT_DIR="$3"
+# Resolve to an absolute path up front — the packaging happens after a cd
+# into a temp dir, so a relative out-dir would vanish with the temp tree.
+mkdir -p "$3"
+OUT_DIR="$(realpath "$3")"
 
 # pacman versions use _ instead of - (e.g. 4.0.0-nightly.x → 4.0.0_nightly.x)
 PKGVER="${VERSION//-/_}"
@@ -54,7 +57,6 @@ LANG=C bsdtar -czf .MTREE --format=mtree \
   .PKGINFO usr
 
 PKGFILE="$OUT_DIR/${PKGNAME}-${PKGVER}-1-${ARCH}.pkg.tar.zst"
-mkdir -p "$OUT_DIR"
 LANG=C bsdtar -cf - .PKGINFO .MTREE usr | zstd -19 -o "$PKGFILE"
 
 echo "Built $PKGFILE"
