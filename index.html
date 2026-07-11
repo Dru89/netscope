@@ -4,6 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Netscope</title>
+    <script>
+      // Pre-paint setup so neither theme nor platform-dependent layout
+      // flashes on load. An explicit Light/Dark choice sets data-theme (which
+      // the design tokens key off); System mode leaves it unset so
+      // prefers-color-scheme decides. data-platform mirrors the value the
+      // Electron preload used to set ("darwin"/"win32"/"linux") but is
+      // derived synchronously here so it works identically under Tauri.
+      (function () {
+        var mode = localStorage.getItem("themeMode");
+        if (mode === "light" || mode === "dark") {
+          document.documentElement.dataset.theme = mode;
+        }
+        var ua = navigator.userAgent;
+        document.documentElement.dataset.platform = /Macintosh|Mac OS X/.test(
+          ua,
+        )
+          ? "darwin"
+          : /Windows/.test(ua)
+            ? "win32"
+            : "linux";
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

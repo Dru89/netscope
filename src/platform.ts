@@ -1,6 +1,6 @@
 import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
-import { readTextFile } from "@tauri-apps/plugin-fs";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -13,6 +13,9 @@ export type HarFileData = {
 const isElectron = () =>
   typeof window !== "undefined" && !!window.electronAPI;
 
+const isTauri = () =>
+  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+
 export async function openFileDialog(): Promise<HarFileData | null> {
   if (isElectron()) return window.electronAPI.openFileDialog();
 
@@ -21,19 +24,53 @@ export async function openFileDialog(): Promise<HarFileData | null> {
     filters: [{ name: "HAR Files", extensions: ["har"] }],
   });
   if (!filePath || typeof filePath !== "string") return null;
-  const content = await readTextFile(filePath);
-  const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
-  return { filePath, content, fileName };
+  return readHarFile(filePath);
 }
 
+// Reads through Rust rather than the fs plugin: the plugin's scope only
+// covers dialog-selected paths, but drops, recent files, and CLI args hand
+// us arbitrary paths, and a local file viewer must be able to read them.
 export async function readHarFile(
   filePath: string,
 ): Promise<HarFileData | null> {
   if (isElectron()) return window.electronAPI.readHarFile(filePath);
 
-  const content = await readTextFile(filePath);
-  const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
-  return { filePath, content, fileName };
+  return invoke<HarFileData | null>("read_har_file", { path: filePath });
+}
+
+// Real filesystem paths for DOM-dropped files exist only in Electron
+// (webUtils.getPathForFile). Plain-browser dev returns null and the caller
+// falls back to FileReader; Tauri drops never reach the DOM (see onFileDrop).
+export function getPathForFile(file: File): string | null {
+  if (isElectron()) return window.electronAPI.getPathForFile(file) || null;
+  return null;
+}
+
+// Tauri's webview intercepts file drags natively (dragDropEnabled default),
+// so the DOM drop handler must not also process them.
+export function isNativeDropHandled(): boolean {
+  return isTauri();
+}
+
+// Native drag-drop (Tauri only): delivers the real path so dropped files can
+// be registered for dedup like every other open path.
+export function onFileDrop(
+  callback: (data: HarFileData) => void,
+): () => void {
+  if (!isTauri()) return () => {};
+  let unlisten: (() => void) | undefined;
+  getCurrentWebview()
+    .onDragDropEvent((event) => {
+      if (event.payload.type === "drop" && event.payload.paths.length > 0) {
+        void readHarFile(event.payload.paths[0]).then((data) => {
+          if (data) callback(data);
+        });
+      }
+    })
+    .then((fn) => {
+      unlisten = fn;
+    });
+  return () => unlisten?.();
 }
 
 export async function setThemeMode(

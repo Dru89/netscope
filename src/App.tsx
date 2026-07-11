@@ -46,9 +46,17 @@ function App() {
     return (localStorage.getItem("themeMode") as ThemeMode) || "system";
   });
 
-  // Apply theme mode on mount and when it changes
+  // Apply theme mode on mount and when it changes. The root data-theme
+  // attribute is what the CSS keys off for an explicit Light/Dark choice;
+  // System mode removes it so prefers-color-scheme decides (the pre-paint
+  // script in index.html sets it before first render to avoid a flash).
   useEffect(() => {
     localStorage.setItem("themeMode", themeMode);
+    if (themeMode === "system") {
+      delete document.documentElement.dataset.theme;
+    } else {
+      document.documentElement.dataset.theme = themeMode;
+    }
     void platform.setThemeMode(themeMode);
   }, [themeMode]);
 
@@ -113,15 +121,26 @@ function App() {
     return platform.onRequestOpenFile(() => void handleOpenFile());
   }, [handleOpenFile]);
 
-  // Handle drag and drop
+  // Handle drag and drop (DOM path: Electron + plain-browser dev).
+  // Under Tauri the native drag-drop channel delivers drops instead — with
+  // real filesystem paths — via platform.onFileDrop below.
   const handleDrop = useCallback(
-    (e: React.DragEvent) => {
+    async (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      if (platform.isNativeDropHandled()) return;
 
       const files = e.dataTransfer.files;
-      if (files.length > 0) {
-        const file = files[0];
+      if (files.length === 0) return;
+      const file = files[0];
+      const filePath = platform.getPathForFile(file);
+      if (filePath) {
+        // Electron: read via the main process so the window is registered
+        // for dedup and the recent-files list is updated
+        const result = await platform.readHarFile(filePath);
+        if (result) loadHarContent(result.content, result.fileName);
+      } else {
+        // Plain-browser dev: no filesystem path available
         const reader = new FileReader();
         reader.onload = (event) => {
           if (event.target?.result) {
@@ -133,6 +152,15 @@ function App() {
     },
     [loadHarContent],
   );
+
+  // Native drag-drop (Tauri): load in place and register the path so the
+  // dropped file dedups against other windows like every other open path
+  useEffect(() => {
+    return platform.onFileDrop((data) => {
+      loadHarContent(data.content, data.fileName);
+      void platform.registerOpenFile(data.filePath);
+    });
+  }, [loadHarContent]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -231,19 +259,9 @@ function App() {
         return;
       }
 
-      // Cmd/Ctrl+N — new blank window
-      if ((e.metaKey || e.ctrlKey) && e.key === "n") {
-        e.preventDefault();
-        void platform.newWindow();
-        return;
-      }
-
-      // Cmd/Ctrl+W — close current window
-      if ((e.metaKey || e.ctrlKey) && e.key === "w") {
-        e.preventDefault();
-        void platform.closeWindow();
-        return;
-      }
+      // Cmd/Ctrl+N and Cmd/Ctrl+W are deliberately NOT handled here: the
+      // native menu owns those accelerators in both runtimes, and a web-layer
+      // handler double-fires on Tauri (same bug as the Ctrl+O double-open).
     };
 
     document.addEventListener("keydown", handleKeyDown);
@@ -256,9 +274,11 @@ function App() {
     [filter.search],
   );
 
-  // Filter and sort entries
-  const filteredEntries = har
-    ? har.log.entries.filter((entry) => {
+  // Filter and sort entries. Memoized so selection changes, panel toggles,
+  // and theme switches don't re-filter and re-sort a large HAR every render.
+  const filteredEntries = useMemo(() => {
+    if (!har) return [];
+    return har.log.entries.filter((entry) => {
         // Apply structured filter tokens from the search input
         if (filterTokens.length > 0 && !matchEntry(filterTokens, entry))
           return false;
@@ -276,34 +296,36 @@ function App() {
         if (filter.contentType && getContentType(entry) !== filter.contentType)
           return false;
         return true;
-      })
-    : [];
+      });
+  }, [har, filterTokens, filter.method, filter.statusCode, filter.contentType]);
 
-  const sortedEntries = [...filteredEntries].sort((a, b) => {
-    const dir = sort.direction === "asc" ? 1 : -1;
-    switch (sort.field) {
-      case "name":
-        return dir * getEntryName(a).localeCompare(getEntryName(b));
-      case "method":
-        return dir * a.request.method.localeCompare(b.request.method);
-      case "status":
-        return dir * (a.response.status - b.response.status);
-      case "type":
-        return dir * getContentType(a).localeCompare(getContentType(b));
-      case "size":
-        return dir * (getTransferSize(a) - getTransferSize(b));
-      case "time":
-        return dir * (a.time - b.time);
-      case "waterfall":
-        return (
-          dir *
-          (new Date(a.startedDateTime).getTime() -
-            new Date(b.startedDateTime).getTime())
-        );
-      default:
-        return 0;
-    }
-  });
+  const sortedEntries = useMemo(() => {
+    return [...filteredEntries].sort((a, b) => {
+      const dir = sort.direction === "asc" ? 1 : -1;
+      switch (sort.field) {
+        case "name":
+          return dir * getEntryName(a).localeCompare(getEntryName(b));
+        case "method":
+          return dir * a.request.method.localeCompare(b.request.method);
+        case "status":
+          return dir * (a.response.status - b.response.status);
+        case "type":
+          return dir * getContentType(a).localeCompare(getContentType(b));
+        case "size":
+          return dir * (getTransferSize(a) - getTransferSize(b));
+        case "time":
+          return dir * (a.time - b.time);
+        case "waterfall":
+          return (
+            dir *
+            (new Date(a.startedDateTime).getTime() -
+              new Date(b.startedDateTime).getTime())
+          );
+        default:
+          return 0;
+      }
+    });
+  }, [filteredEntries, sort]);
 
   const summary = har ? computeSummary(har.log.entries) : null;
 
