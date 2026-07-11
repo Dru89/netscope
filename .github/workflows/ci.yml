@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, nightly]
+    # tauri-rewrite is temporary, while the migration branch is validated;
+    # drop it once this merges to nightly.
+    branches: [main, nightly, tauri-rewrite]
   pull_request:
     branches: [main, nightly]
 
