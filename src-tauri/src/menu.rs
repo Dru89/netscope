@@ -37,6 +37,10 @@ pub fn build(app: &tauri::AppHandle) -> tauri::Result<Menu<Wry>> {
                 name: Some("Netscope".to_string()),
                 version: Some(app.package_info().version.to_string()),
                 copyright: Some(COPYRIGHT.to_string()),
+                // Surfaces "restart to install" after an update download
+                // (the menu is rebuilt when that state changes)
+                credits: crate::update::pending_update_version(app)
+                    .map(|v| format!("Version {v} is ready — restart to install.")),
                 ..Default::default()
             }),
         )?;
@@ -316,11 +320,38 @@ pub fn handle_event(app: &tauri::AppHandle, event: MenuEvent) {
             let _ = app.opener().open_url(ISSUES_URL, None::<&str>);
         }
         "about" => {
+            use tauri_plugin_dialog::{MessageDialogButtons, MessageDialogResult};
             let version = app.package_info().version.to_string();
-            app.dialog()
-                .message(format!("Version {version}\n\n{COPYRIGHT}"))
-                .title("About Netscope")
-                .show(|_| {});
+            let mut message = format!("Version {version}\n\n{COPYRIGHT}");
+            match crate::update::pending_update_version(app) {
+                Some(pending) => {
+                    message.push_str(&format!(
+                        "\n\nVersion {pending} is ready — restart to install."
+                    ));
+                    let app = app.clone();
+                    app.clone()
+                        .dialog()
+                        .message(message)
+                        .title("About Netscope")
+                        .buttons(MessageDialogButtons::OkCancelCustom(
+                            "Restart Now".to_string(),
+                            "OK".to_string(),
+                        ))
+                        .show_with_result(move |result| {
+                            if let MessageDialogResult::Custom(choice) = result {
+                                if choice == "Restart Now" {
+                                    crate::update::restart_and_install(&app);
+                                }
+                            }
+                        });
+                }
+                None => {
+                    app.dialog()
+                        .message(message)
+                        .title("About Netscope")
+                        .show(|_| {});
+                }
+            }
         }
         id if id.starts_with("recent:") => {
             let path = id

@@ -30,6 +30,9 @@ pub struct AppState {
     // Data for the currently-open request-row context menu (set when the
     // menu pops, consumed by its click handler).
     pub context_menu: Mutex<Option<crate::context_menu::ContextMenuState>>,
+    // A downloaded update waiting for the user to restart (drives the About
+    // panel status and its Restart Now action).
+    pub pending_update: Mutex<Option<crate::update::PendingUpdate>>,
 }
 
 impl AppState {
@@ -44,6 +47,7 @@ impl AppState {
             zoom_levels: Mutex::new(HashMap::new()),
             recent_files: Mutex::new(Vec::new()),
             context_menu: Mutex::new(None),
+            pending_update: Mutex::new(None),
         }
     }
 

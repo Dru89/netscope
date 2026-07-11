@@ -4,6 +4,7 @@ mod menu;
 mod prefs;
 mod recent;
 mod state;
+mod update;
 mod windows;
 
 use har::{load_har_file, HarFileData};
@@ -157,6 +158,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             read_har_file,
             get_window_file,
@@ -175,11 +177,28 @@ pub fn run() {
             app.set_menu(menu::build(app.handle())?)?;
             app.on_menu_event(menu::handle_event);
 
+            // Files saved before an update-triggered restart come back once.
+            // A file passed by the OS takes the first window; restored files
+            // then open in their own windows.
+            let mut restore: Vec<String> = update::take_restore_state(app.handle())
+                .into_iter()
+                .filter(|p| std::path::Path::new(p).exists())
+                .collect();
+            let mut first_file = startup_file.clone();
+            if first_file.is_none() && !restore.is_empty() {
+                first_file = Some(restore.remove(0));
+            }
+
             // All windows are created from Rust (none in tauri.conf.json) so
             // every window — including the first — gets the same cascade,
             // chrome, and hidden-until-ready treatment.
-            let file = startup_file.as_deref().and_then(load_har_file);
+            let file = first_file.as_deref().and_then(load_har_file);
             windows::create_window(app.handle(), file)?;
+            if !restore.is_empty() {
+                windows::open_paths_in_new_windows(app.handle(), &restore);
+            }
+
+            update::check_for_updates(app.handle());
 
             if cfg!(debug_assertions) {
                 app.handle().plugin(

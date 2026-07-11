@@ -28,12 +28,23 @@
     "category": "DeveloperTool",
     "fileAssociations": [
       {
-        "ext": ["har"],
+        "ext": [
+          "har"
+        ],
         "name": "HAR File",
         "description": "HTTP Archive File",
         "role": "Viewer"
       }
     ],
-    "linux": {}
+    "linux": {},
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRCMjBGM0Q5MzRCNDZENDEKUldSQmJiUTAyZk1nUzZpOUVsSHhIdDJVeCs2bFljSklxa0Q5TkJ2dWlWRENXUlpiakNCdXgvWXgK",
+      "endpoints": [
+        "https://github.com/Dru89/netscope/releases/latest/download/latest.json"
+      ]
+    }
   }
 }
