@@ -27,6 +27,12 @@ struct AppState {
     last_created_label: Mutex<Option<String>>,
     // label of the most-recently focused window, used for routing "open" events
     last_focused_label: Mutex<Option<String>>,
+    // label → logical-pixel position we explicitly assigned via builder.position();
+    // outer_position() fails on Wayland so this map is our only reliable source
+    // for the cascade chain — we only ever write to it from create_window, not
+    // from OS events (Moved fires on Wayland too, but reflects the compositor's
+    // placement decisions, not ours, which would corrupt the cascade chain)
+    window_positions: Mutex<HashMap<String, (f64, f64)>>,
 }
 
 impl AppState {
@@ -38,6 +44,7 @@ impl AppState {
             active_windows: Mutex::new(initial_count),
             last_created_label: Mutex::new(Some("main".to_string())),
             last_focused_label: Mutex::new(Some("main".to_string())),
+            window_positions: Mutex::new(HashMap::new()),
         }
     }
 
@@ -73,19 +80,31 @@ fn read_har_file(path: &str) -> Option<HarFileData> {
 }
 
 // Returns the position (in logical pixels) for the next cascaded window.
-// Mirrors Electron's: lastCreatedWindow ?? getFocusedWindow(), offset by 28px.
+//
+// Reference window is the focused window, matching Ghostty/Chrome behaviour:
+// if you refocus an earlier window, the next new window cascades from that
+// one rather than from the most-recently-created window.
+//
+// We read positions from window_positions — a map seeded from WindowEvent::Moved
+// (actual compositor position) and from create_window (our requested position
+// before Moved fires). On X11 outer_position() serves as a further fallback
+// for "main", which we never explicitly positioned.
 fn cascade_position(app: &tauri::AppHandle) -> Option<(f64, f64)> {
     let state = app.state::<AppState>();
-    let reference_label = state.last_created_label.lock().unwrap().clone();
 
-    let reference = reference_label
-        .and_then(|label| app.get_webview_window(&label))
-        .or_else(|| {
-            app.webview_windows()
-                .into_values()
-                .find(|w| w.is_focused().unwrap_or(false))
-        })?;
+    // Prefer the focused window; fall back to the most-recently-created one.
+    let reference_label = {
+        let focused = state.last_focused_label.lock().unwrap().clone();
+        let created = state.last_created_label.lock().unwrap().clone();
+        focused.or(created)?
+    };
 
+    if let Some(&(x, y)) = state.window_positions.lock().unwrap().get(&reference_label) {
+        return Some((x + CASCADE_OFFSET, y + CASCADE_OFFSET));
+    }
+
+    // No tracked position yet (e.g. "main" on X11 before any Moved event).
+    let reference = app.get_webview_window(&reference_label)?;
     let scale = reference.scale_factor().ok()?;
     let phys = reference.outer_position().ok()?;
     Some((
@@ -104,10 +123,31 @@ fn attach_window_handler(app: &tauri::AppHandle, label: &str) {
                     *app_handle.state::<AppState>().last_focused_label.lock().unwrap() =
                         Some(label.clone());
                 }
+                WindowEvent::Moved(position) => {
+                    // Update tracked position so the next cascade starts from where
+                    // this window actually ended up — the compositor may ignore our
+                    // position hint and place the window elsewhere, so we read back
+                    // the actual position here. On Wayland this event does fire with
+                    // real coordinates (compositor-relative), giving us a correct
+                    // anchor for the next window.
+                    if let Some(w) = app_handle.get_webview_window(&label) {
+                        if let Ok(scale) = w.scale_factor() {
+                            let x = position.x as f64 / scale;
+                            let y = position.y as f64 / scale;
+                            app_handle
+                                .state::<AppState>()
+                                .window_positions
+                                .lock()
+                                .unwrap()
+                                .insert(label.clone(), (x, y));
+                        }
+                    }
+                }
                 WindowEvent::Destroyed => {
                     let state = app_handle.state::<AppState>();
                     state.open_files.lock().unwrap().remove(&label);
                     state.pending_files.lock().unwrap().remove(&label);
+                    state.window_positions.lock().unwrap().remove(&label);
                     {
                         let mut last = state.last_created_label.lock().unwrap();
                         if last.as_deref() == Some(&label) {
@@ -164,6 +204,10 @@ fn create_window(app: &tauri::AppHandle, file: Option<HarFileData>) -> tauri::Re
 
     if let Some((x, y)) = cascade_position(app) {
         builder = builder.position(x, y);
+        // Record the position we assigned so cascade_position can use it on the
+        // next call — outer_position() is unreliable on Wayland, so this map is
+        // the only reliable source of position for the cascade chain.
+        state.window_positions.lock().unwrap().insert(label.clone(), (x, y));
     }
 
     builder.build()?;
@@ -262,6 +306,27 @@ pub fn run() {
             }
 
             app.manage(state);
+
+            // On X11, seed the cascade map with "main"'s actual position so
+            // window-1 cascades cleanly from it. On Wayland outer_position()
+            // fails, so we skip this — window-1 will get no position hint and
+            // the compositor places it freely; WindowEvent::Moved then fires
+            // with the real coordinates, seeding the chain from there.
+            if let Some(main_pos) = app
+                .get_webview_window("main")
+                .and_then(|w| {
+                    let scale = w.scale_factor().ok()?;
+                    let phys = w.outer_position().ok()?;
+                    Some((phys.x as f64 / scale, phys.y as f64 / scale))
+                })
+            {
+                app.state::<AppState>()
+                    .window_positions
+                    .lock()
+                    .unwrap()
+                    .insert("main".to_string(), main_pos);
+            }
+
             attach_window_handler(app.handle(), "main");
 
             // Build menu
