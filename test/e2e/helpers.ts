@@ -37,6 +37,8 @@ export async function launchApp(args: string[] = []): Promise<Session> {
   // Wait for the driver to accept connections
   await waitForPort(DRIVER_PORT);
 
+  // No browserName: WebKitWebDriver's capability matching rejects "wry"
+  // (Tauri's WebdriverIO example passes only tauri:options).
   const browser = await remote({
     hostname: "127.0.0.1",
     port: DRIVER_PORT,
@@ -47,7 +49,6 @@ export async function launchApp(args: string[] = []): Promise<Session> {
         application: BINARY,
         args,
       },
-      browserName: "wry",
     },
   });
 
@@ -58,6 +59,9 @@ export async function launchApp(args: string[] = []): Promise<Session> {
       driver.kill();
     }
   };
+
+  // If remote() threw, afterAll still runs; give it a killable handle
+  process.once("beforeExit", () => driver.kill());
 
   return { browser, stop };
 }

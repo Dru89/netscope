@@ -10,7 +10,7 @@ describe("welcome screen", () => {
   });
 
   afterAll(async () => {
-    await session.stop();
+    await session?.stop();
   });
 
   it("renders the welcome screen with no file", async () => {
@@ -41,7 +41,7 @@ describe("file open and interaction", () => {
   });
 
   afterAll(async () => {
-    await session.stop();
+    await session?.stop();
   });
 
   it("loads a HAR passed as a CLI argument", async () => {
