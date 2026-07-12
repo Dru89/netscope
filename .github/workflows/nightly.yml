@@ -54,6 +54,10 @@ jobs:
     strategy:
       # Keep going if one platform fails — partial nightly artifacts are still useful.
       fail-fast: false
+      # One platform at a time: each build merge-replaces the shared
+      # latest.json asset on the release (download/delete/upload), and
+      # concurrent jobs race on the delete. Serial is slower but safe.
+      max-parallel: 1
       matrix:
         include:
           - os: macos-latest
