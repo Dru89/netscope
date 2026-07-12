@@ -34,6 +34,8 @@ function ClampedValue({ children }: { children: React.ReactNode }) {
 interface DetailPanelProps {
   entry: HarEntry;
   onClose: () => void;
+  // Dev-only override used by the ?tab= screenshot param
+  initialTab?: string;
 }
 
 type DetailTab =
@@ -44,8 +46,21 @@ type DetailTab =
   | "cookies"
   | "source";
 
-export function DetailPanel({ entry, onClose }: DetailPanelProps) {
-  const [activeTab, setActiveTab] = useState<DetailTab>("headers");
+const TAB_IDS: DetailTab[] = [
+  "headers",
+  "payload",
+  "response",
+  "timing",
+  "cookies",
+  "source",
+];
+
+export function DetailPanel({ entry, onClose, initialTab }: DetailPanelProps) {
+  const [activeTab, setActiveTab] = useState<DetailTab>(
+    TAB_IDS.includes(initialTab as DetailTab)
+      ? (initialTab as DetailTab)
+      : "headers",
+  );
 
   const tabs: { id: DetailTab; label: string }[] = [
     { id: "headers", label: "Headers" },

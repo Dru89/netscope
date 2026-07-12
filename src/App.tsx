@@ -125,18 +125,43 @@ function App() {
     return platform.onRequestOpenFile(() => void handleOpenFile());
   }, [handleOpenFile]);
 
-  // Dev-only: load a fixture over HTTP in plain-browser dev, e.g.
+  // Dev-only: load a fixture over HTTP in plain-browser dev, with optional
+  // state params for visual work and screenshots, e.g.
   // http://localhost:5173/?fixture=/test/fixtures/www.example.com.har
+  //   &theme=dark&filter=mime-type:json&select=3&tab=timing
   useEffect(() => {
     if (!import.meta.env.DEV) return;
-    const fixture = new URLSearchParams(window.location.search).get("fixture");
+    const params = new URLSearchParams(window.location.search);
+    const fixture = params.get("fixture");
     if (!fixture) return;
     void fetch(fixture)
       .then((res) => res.text())
-      .then((text) =>
-        loadHarContent(text, fixture.split("/").pop() ?? fixture),
-      );
+      .then((text) => {
+        loadHarContent(text, fixture.split("/").pop() ?? fixture);
+        const search = params.get("filter");
+        if (search) setFilter((f) => ({ ...f, search }));
+      });
   }, [loadHarContent]);
+
+  // Dev-only: force a theme via ?theme= (works on the welcome screen too)
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const theme = new URLSearchParams(window.location.search).get("theme");
+    if (theme === "light" || theme === "dark") setThemeMode(theme);
+  }, []);
+
+  // Dev-only: select a row (and open the detail panel) once entries exist
+  useEffect(() => {
+    if (!import.meta.env.DEV || !har) return;
+    const params = new URLSearchParams(window.location.search);
+    const select = params.get("select");
+    if (select === null) return;
+    const entry = har.log.entries[Number(select)];
+    if (entry) {
+      setSelectedEntry(entry);
+      setDetailPanelOpen(true);
+    }
+  }, [har]);
 
   // DOM drag-and-drop only serves plain-browser dev: under Tauri the native
   // drag-drop channel delivers drops instead — with real filesystem paths —
@@ -217,6 +242,12 @@ function App() {
 
   const filterInputRef = useRef<HTMLInputElement>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  // Dev-only: initial detail-panel tab for the ?tab= screenshot param
+  const devInitialTab = useMemo(() => {
+    if (!import.meta.env.DEV) return undefined;
+    return new URLSearchParams(window.location.search).get("tab") ?? undefined;
+  }, []);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -394,6 +425,7 @@ function App() {
                 <DetailPanel
                   entry={selectedEntry}
                   onClose={handleCloseDetail}
+                  initialTab={devInitialTab}
                 />
               </div>
             )}
