@@ -30,9 +30,11 @@ const releaseUrl = `${repoUrl}/releases/latest`;
         <img src="/netscope-icon.png" alt="Netscope icon" class="hero-icon" />
         <h1 class="hero-title">Inspect HAR files<br />on your desktop.</h1>
         <p class="hero-subtitle">
-          A desktop app for viewing and analyzing HTTP Archive files. The same
-          network inspection experience as Chrome DevTools, but as a standalone
-          app. Available for macOS, Windows, and Linux.
+          A native desktop app for viewing and analyzing HTTP Archive files. The
+          same network inspection experience as Chrome DevTools, but as a
+          standalone app — and local-first: HAR files carry cookies and auth
+          tokens, so nothing you open ever leaves your machine. Available for
+          macOS, Windows, and Linux.
         </p>
         <div class="hero-actions">
           <a
@@ -68,21 +70,24 @@ const releaseUrl = `${repoUrl}/releases/latest`;
 
         <div class="feature">
           <div class="feature-text">
-            <h3>Filter and search</h3>
+            <h3>Filter like DevTools</h3>
             <p>
-              Narrow down requests by content type -- XHR, JS, CSS, images,
-              fonts, and more. Search by URL to find exactly what you're looking
-              for. Sort by any column.
+              A structured query language with autocomplete: <code
+                >domain:api.example.com</code
+              >, <code>status-code:4xx</code>, <code>larger-than:100k</code>,
+              <code>method:POST</code> — negatable, combinable, and suggested from
+              the values in your capture. Plus one-click content-type filters and
+              sortable columns.
             </p>
           </div>
           <div class="feature-images">
             <img
               src="/main-screen-filter.png"
-              alt="Filtering requests by image type"
+              alt="Filtering requests with larger-than:10k"
             />
             <img
               src="/main-screen-search.png"
-              alt="Searching requests by URL"
+              alt="Searching requests by name"
             />
           </div>
         </div>
@@ -180,10 +185,25 @@ const releaseUrl = `${repoUrl}/releases/latest`;
             </p>
           </div>
           <div class="extra">
-            <h4>Auto-updates</h4>
+            <h4>Copy as cURL</h4>
             <p>
-              The app checks for updates automatically and installs them when
-              you quit.
+              Right-click any request to copy it as cURL, fetch, or PowerShell —
+              or open it in your browser. Bulk-copy the whole filtered set.
+            </p>
+          </div>
+          <div class="extra">
+            <h4>Local-first</h4>
+            <p>
+              Captures stay on your machine. The only network request Netscope
+              ever makes is its own update check.
+            </p>
+          </div>
+          <div class="extra">
+            <h4>Updates that ask first</h4>
+            <p>
+              When an update is available, you choose: install now, remind me
+              later, or skip this version. Your open files come back after the
+              restart.
             </p>
           </div>
           <div class="extra">
@@ -195,7 +215,7 @@ const releaseUrl = `${repoUrl}/releases/latest`;
           </div>
           <div class="extra">
             <h4>Open source</h4>
-            <p>MIT licensed. Built with Electron, React, and TypeScript.</p>
+            <p>MIT licensed. Built with Tauri, Rust, React, and TypeScript.</p>
           </div>
         </div>
       </div>
@@ -430,6 +450,15 @@ const releaseUrl = `${repoUrl}/releases/latest`;
     font-size: 15px;
     color: var(--color-text-secondary);
     line-height: 1.7;
+  }
+
+  .feature p code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    background: var(--color-bg-secondary, rgba(128, 128, 128, 0.12));
+    border-radius: 4px;
+    padding: 1px 5px;
+    white-space: nowrap;
   }
 
   .feature-image img,
