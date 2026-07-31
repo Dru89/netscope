@@ -3,6 +3,10 @@ name: CI
 on:
   push:
     branches: [main, nightly]
+    # Also run on release tags: release.yml's own gate is just `npm test`, so
+    # without this the exact commit being shipped never gets tsc, clippy,
+    # cargo test, or E2E.
+    tags: ["v*"]
   pull_request:
     branches: [main, nightly]
 

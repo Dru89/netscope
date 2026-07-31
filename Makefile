@@ -60,6 +60,7 @@ release:
 		echo "Error: You have uncommitted changes. Please commit or stash them first."; \
 		exit 1; \
 	fi; \
+	BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
 	CURRENT=$$(node -p "require('./package.json').version"); \
 	MAJOR=$$(echo $$CURRENT | cut -d. -f1); \
 	MINOR=$$(echo $$CURRENT | cut -d. -f2); \
@@ -94,14 +95,14 @@ release:
 		esac; \
 	fi; \
 	echo ""; \
-	echo "Releasing v$$NEXT..."; \
+	echo "Releasing v$$NEXT from $$BRANCH..."; \
 	echo ""; \
 	npm version $$NEXT --no-git-tag-version && \
 	npm install --package-lock-only && \
 	git add package.json package-lock.json && \
 	git commit -m "Bump version to $$NEXT" && \
 	git tag "v$$NEXT" && \
-	git push origin main && \
+	git push origin "$$BRANCH" && \
 	git push origin "v$$NEXT"; \
 	echo ""; \
 	echo "Tagged and pushed v$$NEXT. GitHub Actions will handle the rest."; \
