@@ -43,6 +43,31 @@ jobs:
       - run: cargo test --manifest-path src-tauri/Cargo.toml
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 
+  # The recent-files, window and menu modules have sizeable #[cfg(windows)] and
+  # #[cfg(target_os = "macos")] branches that the Linux job above never
+  # compiles, so a break there used to surface only when a release build ran.
+  # Check (not test — the one unit test is platform-independent) on both.
+  rust-cross:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Vite output must exist for tauri's context generation
+      - run: npm run build:vite
+      - run: cargo check --manifest-path src-tauri/Cargo.toml
+
   # Drives the real release binary through tauri-driver (WebDriver over
   # WebKitWebDriver). Linux-only: tauri-driver has no macOS support, and the
   # Windows setup (msedgedriver) is future work.

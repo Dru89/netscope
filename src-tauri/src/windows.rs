@@ -340,8 +340,8 @@ fn reusable_welcome_window(app: &tauri::AppHandle) -> Option<tauri::WebviewWindo
 // Load a file into an existing (welcome) window. The file is both stashed as
 // pending and emitted: at launch the renderer may not have registered its
 // listener yet and picks the file up on mount instead; once mounted, the
-// event wins and the pending entry just mirrors the window's current file
-// (so a webview reload restores it).
+// event wins and the pending entry is consumed by get_window_file. Whichever
+// path delivers it, open_files is what a later reload reads back.
 pub fn send_file_to_window(app: &tauri::AppHandle, window: &tauri::WebviewWindow, resolved: &Path) {
     match load_har_file(resolved) {
         Some(data) => {

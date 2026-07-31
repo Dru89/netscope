@@ -92,7 +92,7 @@ fn os_note_recent(app: &tauri::AppHandle, path: &Path) {
         use objc2_app_kit::NSDocumentController;
         use objc2_foundation::{NSString, NSURL};
         let Some(mtm) = MainThreadMarker::new() else { return };
-        let url = unsafe { NSURL::fileURLWithPath(&NSString::from_str(&path)) };
+        let url = NSURL::fileURLWithPath(&NSString::from_str(&path));
         NSDocumentController::sharedDocumentController(mtm).noteNewRecentDocumentURL(&url);
     });
 }
@@ -154,10 +154,13 @@ fn os_note_recent(_app: &tauri::AppHandle, path: &Path) {
 
 #[cfg(windows)]
 fn os_clear_recent(_app: &tauri::AppHandle, _previous: &[String]) {
-    unsafe {
-        windows::Win32::UI::Shell::SHAddToRecentDocs(
-            windows::Win32::UI::Shell::SHARD_PATHW.0 as u32,
-            None,
-        );
-    }
+    // Deliberately a no-op: clearing our in-app list must not touch the OS
+    // list. SHAddToRecentDocs with a null pointer clears recent-document
+    // usage data for *every* application, not just ours — the same trap the
+    // Linux branch above avoids by removing individual entries. The Win32
+    // API for "remove only this app's entries" is
+    // IApplicationDestinations::RemoveAllDestinations, which needs COM setup
+    // and a Windows machine to verify; until then the jump list keeps its
+    // entries after Clear Menu, which is a far smaller wrong than wiping the
+    // user's system-wide recent items.
 }

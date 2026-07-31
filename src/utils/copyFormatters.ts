@@ -136,27 +136,39 @@ function buildFetch(entry: HarEntry, browserMode: boolean): string {
 // PowerShell
 // ---------------------------------------------------------------------------
 
+// Single-quote a value for PowerShell. Everything interpolated into the
+// command comes from the HAR, which is untrusted input someone may have been
+// handed — and the output is built to be pasted into a shell. Single-quoted
+// PowerShell strings suppress all interpolation ($var, $(...), backtick
+// escapes), so the only character needing escaping is the quote itself,
+// doubled. Double-quoted strings would leave $(...) live.
+function psQuote(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
 /**
  * Format a HAR entry as a PowerShell Invoke-WebRequest command.
  *
  * Produces output like:
- *   Invoke-WebRequest -Uri "https://example.com/api" `
- *     -Method POST `
- *     -Headers @{ "Content-Type" = "application/json" } `
+ *   Invoke-WebRequest -Uri 'https://example.com/api' `
+ *     -Method 'POST' `
+ *     -Headers @{ 'Content-Type' = 'application/json' } `
  *     -Body '{"key":"value"}'
  */
 export function toPowerShell(entry: HarEntry): string {
-  const parts: string[] = [`Invoke-WebRequest -Uri "${entry.request.url}"`];
+  const parts: string[] = [
+    `Invoke-WebRequest -Uri ${psQuote(entry.request.url)}`,
+  ];
 
   const method = entry.request.method.toUpperCase();
   if (method !== "GET") {
-    parts.push(`-Method ${method}`);
+    parts.push(`-Method ${psQuote(method)}`);
   }
 
   const headers = getHeaders(entry);
   if (headers.length > 0) {
     const pairs = headers.map(
-      (h) => `"${h.name}" = "${h.value.replace(/"/g, '`"')}"`,
+      (h) => `${psQuote(h.name)} = ${psQuote(h.value)}`,
     );
     if (pairs.length === 1) {
       parts.push(`-Headers @{ ${pairs[0]} }`);
@@ -167,8 +179,7 @@ export function toPowerShell(entry: HarEntry): string {
 
   const body = getBody(entry);
   if (body) {
-    // Use single quotes for the body to avoid PowerShell string interpolation
-    parts.push(`-Body '${body.replace(/'/g, "''")}'`);
+    parts.push(`-Body ${psQuote(body)}`);
   }
 
   return parts.join(" `\n  ");
