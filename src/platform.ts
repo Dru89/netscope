@@ -11,7 +11,7 @@ import {
 } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { listen } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 
 import type { HarEntry, SortDirection, SortField } from "./types/har";
@@ -94,11 +94,50 @@ export function onFileDrop(callback: (data: HarFileData) => void): () => void {
   return () => unlisten?.();
 }
 
-export async function setThemeMode(
-  mode: "system" | "light" | "dark",
-): Promise<void> {
+export type ThemeModeValue = "system" | "light" | "dark";
+
+// Native chrome (title bar, scrollbars) for *this* window only. null hands the
+// decision back to the OS, matching what System mode does in CSS.
+export async function setThemeMode(mode: ThemeModeValue): Promise<void> {
   if (!isTauri()) return;
   await getCurrentWindow().setTheme(mode === "system" ? null : mode);
+}
+
+const THEME_MODE_EVENT = "theme-mode-changed";
+
+// Tell the other open windows the user picked a mode.
+//
+// This one goes webview-to-webview rather than through a Rust command, unlike
+// the other cross-window plumbing here: the theme is purely renderer state,
+// Rust holds none of it, and a command would be a pass-through that re-emits.
+// New windows are already covered — localStorage is shared across windows, so
+// the pre-paint script in index.html picks the value up. The gap is only the
+// windows that are already open. sourceLabel is so the sender can skip its own
+// echo (emit reaches every window, including this one).
+export async function broadcastThemeMode(mode: ThemeModeValue): Promise<void> {
+  if (!isTauri()) return;
+  await emit(THEME_MODE_EVENT, {
+    sourceLabel: getCurrentWindow().label,
+    mode,
+  });
+}
+
+export function onThemeModeChanged(
+  callback: (mode: ThemeModeValue) => void,
+): () => void {
+  if (!isTauri()) return () => {};
+  let unlisten: (() => void) | undefined;
+  listen<{ sourceLabel?: string; mode?: ThemeModeValue }>(
+    THEME_MODE_EVENT,
+    (event) => {
+      const { sourceLabel, mode } = event.payload ?? {};
+      if (!mode || sourceLabel === getCurrentWindow().label) return;
+      callback(mode);
+    },
+  ).then((fn) => {
+    unlisten = fn;
+  });
+  return () => unlisten?.();
 }
 
 export async function setWindowTitle(title: string): Promise<void> {

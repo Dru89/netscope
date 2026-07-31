@@ -61,6 +61,21 @@ signing, notarization, and file associations only exist on the bundled app.
 - [ ] System/Light/Dark toggle in the summary bar switches instantly,
       persists across relaunch, no flash on launch in dark mode
 - [ ] Traffic lights don't overlap the toolbar at any window width
+- [ ] With two windows open, switching theme in one switches the other too —
+      both the content **and** the native title bar, without needing a reload
+- [ ] The other window's toggle also moves its highlight to the new mode
+      (it isn't just repainted, its state follows)
+- [ ] Switching back to System in one window returns both to following macOS,
+      and toggling macOS appearance then moves both
+- [ ] A window opened _after_ a theme change starts in that theme, with no
+      flash of the previous one
+- [ ] Large capture (test/fixtures/github.com.har or bigger): flick-scroll
+      hard top to bottom — no blank gaps, no rows drifting out of line with
+      the sticky header, and the header stays put during momentum scroll
+- [ ] Rubber-band overscroll past the top and bottom of a large capture
+      leaves the rows correctly positioned afterwards
+- [ ] Holding j / k scrolls smoothly through a large capture; Home and End
+      jump to the first and last row with the selection visible
 
 ## Updater (needs a newer release to exist)
 
