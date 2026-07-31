@@ -1,4 +1,12 @@
-import { useMemo, useEffect, useRef, useCallback } from "react";
+import {
+  useMemo,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+  useState,
+  memo,
+} from "react";
 import type { HarEntry, SortState, SortField } from "../types/har";
 import {
   getEntryName,
@@ -12,6 +20,17 @@ import {
   getContentTypeIcon,
   computeTimingOffsets,
 } from "../utils/har";
+import { computeVirtualWindow } from "../utils/virtualWindow";
+
+const COLUMN_COUNT = 7;
+
+// Rows outside the viewport rendered on each side. Enough that a fast scroll
+// or a keyboard jump lands on already-rendered rows, small enough that the
+// DOM stays a few dozen rows instead of thousands.
+const OVERSCAN = 12;
+
+// Only used until a real row can be measured; see syncMetrics below.
+const ESTIMATED_ROW_HEIGHT = 26;
 
 interface RequestTableProps {
   entries: HarEntry[];
@@ -40,7 +59,72 @@ export function RequestTable({
 }: RequestTableProps) {
   const internalContainerRef = useRef<HTMLDivElement>(null);
   const containerRef = externalContainerRef ?? internalContainerRef;
+  const theadRef = useRef<HTMLTableSectionElement>(null);
   const prevEntriesRef = useRef<HarEntry[]>(entries);
+
+  // Virtual window state. A capture can hold tens of thousands of entries and
+  // each row is a dozen-odd elements, so only the visible slice is rendered;
+  // spacer rows stand in for the rest to keep the scrollbar honest.
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const [rowHeight, setRowHeight] = useState(ESTIMATED_ROW_HEIGHT);
+  const headerHeightRef = useRef(0);
+
+  const hasRows = entries.length > 0;
+
+  // The window's arithmetic has to agree with what the browser actually laid
+  // out or scrolling drifts, and the rendered height isn't simply the
+  // --ns-row-h token: the cells collapse a 1px border between them. So
+  // measure a real row rather than trusting the token, and re-measure when
+  // the container resizes (the header's height feeds the same arithmetic).
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const syncMetrics = () => {
+      setViewportHeight(container.clientHeight);
+      headerHeightRef.current = theadRef.current?.offsetHeight ?? 0;
+      const row = container.querySelector<HTMLElement>("tbody tr.row");
+      const measured = row?.getBoundingClientRect().height ?? 0;
+      if (measured > 0) {
+        setRowHeight((prev) =>
+          Math.abs(prev - measured) > 0.5 ? measured : prev,
+        );
+      }
+    };
+
+    syncMetrics();
+    const observer = new ResizeObserver(syncMetrics);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [containerRef, hasRows]);
+
+  // Set state straight from the event rather than deferring to
+  // requestAnimationFrame: React batches these already, rows are memoized so
+  // a re-render is cheap, and rAF doesn't run in a background window — which
+  // would leave the window stale after any programmatic scroll there.
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  }, []);
+
+  const { firstVisible, lastVisible, padTop, padBottom } = computeVirtualWindow(
+    {
+      scrollTop,
+      viewportHeight,
+      rowHeight,
+      total: entries.length,
+      overscan: OVERSCAN,
+    },
+  );
+  const visibleEntries = entries.slice(firstVisible, lastVisible);
+
+  // Where an entry's row sits in scroll coordinates. Computed rather than
+  // measured: with virtualization the row usually isn't in the DOM.
+  const rowTopFor = useCallback(
+    (positionInList: number) =>
+      headerHeightRef.current + positionInList * rowHeight,
+    [rowHeight],
+  );
 
   // Scroll the selected entry into view only when the entries list changes
   // (e.g., when switching content-type filter tabs), not on selection change
@@ -48,27 +132,18 @@ export function RequestTable({
     const entriesChanged = prevEntriesRef.current !== entries;
     prevEntriesRef.current = entries;
 
-    if (!entriesChanged || !selectedEntry || !containerRef.current) return;
-    const selectedIndex = selectedEntry._index;
-    const isInList = entries.some((e) => e._index === selectedIndex);
-    if (!isInList) return;
+    const container = containerRef.current;
+    if (!entriesChanged || !selectedEntry || !container) return;
+    const position = entries.findIndex(
+      (e) => e._index === selectedEntry._index,
+    );
+    if (position === -1) return;
 
-    // Use requestAnimationFrame to ensure DOM has updated with new entries
-    requestAnimationFrame(() => {
-      const container = containerRef.current;
-      const row = container?.querySelector(
-        `tr[data-entry-index="${selectedIndex}"]`,
-      ) as HTMLElement | null;
-      if (!row || !container) return;
-
-      // Calculate scroll position that centers the row in the container
-      const rowTop = row.offsetTop;
-      const rowHeight = row.offsetHeight;
-      const containerHeight = container.clientHeight;
-      const targetScrollTop = rowTop - containerHeight / 2 + rowHeight / 2;
-      container.scrollTop = targetScrollTop;
-    });
-  }, [entries, selectedEntry]);
+    // Center the row in the container
+    const rowTop = rowTopFor(position);
+    const target = rowTop - container.clientHeight / 2 + rowHeight / 2;
+    container.scrollTop = Math.max(0, target);
+  }, [entries, selectedEntry, containerRef, rowHeight, rowTopFor]);
 
   // Compute waterfall boundaries
   const { minTime, maxTime } = useMemo(() => {
@@ -112,25 +187,21 @@ export function RequestTable({
     (entry: HarEntry) => {
       const container = containerRef.current;
       if (!container) return;
-      requestAnimationFrame(() => {
-        const row = container.querySelector(
-          `tr[data-entry-index="${entry._index}"]`,
-        ) as HTMLElement | null;
-        if (!row) return;
-        const rowTop = row.offsetTop;
-        const rowBottom = rowTop + row.offsetHeight;
-        const thead = container.querySelector("thead") as HTMLElement | null;
-        const headerHeight = thead?.offsetHeight ?? 0;
-        const viewTop = container.scrollTop + headerHeight;
-        const viewBottom = container.scrollTop + container.clientHeight;
-        if (rowTop < viewTop) {
-          container.scrollTop = rowTop - headerHeight;
-        } else if (rowBottom > viewBottom) {
-          container.scrollTop = rowBottom - container.clientHeight;
-        }
-      });
+      const position = entries.findIndex((e) => e._index === entry._index);
+      if (position === -1) return;
+
+      const headerHeight = headerHeightRef.current;
+      const rowTop = rowTopFor(position);
+      const rowBottom = rowTop + rowHeight;
+      const viewTop = container.scrollTop + headerHeight;
+      const viewBottom = container.scrollTop + container.clientHeight;
+      if (rowTop < viewTop) {
+        container.scrollTop = Math.max(0, rowTop - headerHeight);
+      } else if (rowBottom > viewBottom) {
+        container.scrollTop = rowBottom - container.clientHeight;
+      }
     },
-    [containerRef],
+    [containerRef, entries, rowHeight, rowTopFor],
   );
 
   // Keyboard navigation within the request table
@@ -143,7 +214,7 @@ export function RequestTable({
       let nextEntry: HarEntry | null = null;
 
       // Up / k — select previous entry
-      if ((e.key === "ArrowUp" && !isMeta) || e.key === "k") {
+      if ((e.key === "ArrowUp" && !isMeta) || (e.key === "k" && !isMeta)) {
         e.preventDefault();
         if (!selectedEntry) {
           nextEntry = entries[entries.length - 1];
@@ -160,7 +231,7 @@ export function RequestTable({
       }
 
       // Down / j — select next entry
-      if ((e.key === "ArrowDown" && !isMeta) || e.key === "j") {
+      if ((e.key === "ArrowDown" && !isMeta) || (e.key === "j" && !isMeta)) {
         e.preventDefault();
         if (!selectedEntry) {
           nextEntry = entries[0];
@@ -215,9 +286,10 @@ export function RequestTable({
       ref={containerRef}
       tabIndex={0}
       onKeyDown={handleKeyDown}
+      onScroll={handleScroll}
     >
       <table className="request-table">
-        <thead>
+        <thead ref={theadRef}>
           <tr>
             <th
               className={`col-name ${sort.field === "name" ? "sorted" : ""}`}
@@ -264,110 +336,144 @@ export function RequestTable({
           </tr>
         </thead>
         <tbody>
-          {entries.map((entry, index) => {
-            const name = getEntryName(entry);
-            const domain = getEntryDomain(entry);
-            const contentType = getContentType(entry);
-            const transferSize = getTransferSize(entry);
-            const isSelected = selectedEntry?._index === entry._index;
-            const isError =
-              entry.response.status >= 400 || entry.response.status === 0;
-            const phases = computeTimingOffsets(entry);
-            const startOffset =
-              new Date(entry.startedDateTime).getTime() - minTime;
-
-            return (
-              <tr
-                key={entry._index ?? index}
-                data-entry-index={entry._index}
-                className={`row ${isSelected ? "selected" : ""} ${isError ? "error-row" : ""}`}
-                onClick={() => onClickEntry(entry)}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  onSelectEntry(entry);
-                  onContextMenu?.(entry);
-                }}
-                title={entry.request.url}
-              >
-                <td className="col-name">
-                  <div className="cell-name">
-                    <span className={`type-badge ${contentType}`}>
-                      {getContentTypeIcon(contentType)}
-                    </span>
-                    <span className="cell-name-text">
-                      {name}
-                      {domain && (
-                        <span className="cell-name-domain"> - {domain}</span>
-                      )}
-                    </span>
-                  </div>
-                </td>
-                <td className="col-method">
-                  <span
-                    className="method-label"
-                    style={{ color: getMethodColor(entry.request.method) }}
-                  >
-                    {entry.request.method}
-                  </span>
-                </td>
-                <td className="col-status">
-                  <span
-                    className="status-code"
-                    style={{
-                      color: getStatusColor(entry.response.status),
-                    }}
-                  >
-                    {entry.response.status || "ERR"}
-                  </span>
-                </td>
-                <td className="col-type">
-                  <span className={`type-badge ${contentType}`}>
-                    {contentType}
-                  </span>
-                </td>
-                <td className="col-size">
-                  <span className="size-cell">
-                    {transferSize > 0 ? formatBytes(transferSize) : "-"}
-                  </span>
-                </td>
-                <td className="col-time">
-                  <span className="time-cell">{formatTime(entry.time)}</span>
-                </td>
-                <td className="col-waterfall">
-                  <div className="waterfall-cell">
-                    {/* One bar spanning the request's duration on the shared
-                        capture timeline; phase segments butt-join inside it
-                        so the rounded ends clip cleanly. */}
-                    <div
-                      className="waterfall-bar"
-                      style={{
-                        left: `${(startOffset / totalDuration) * 100}%`,
-                        width: `${Math.max((entry.time / totalDuration) * 100, 0.2)}%`,
-                      }}
-                    >
-                      {phases.map((phase, i) => {
-                        const requestTime = entry.time || 1;
-                        return (
-                          <div
-                            key={i}
-                            className="waterfall-seg"
-                            style={{
-                              left: `${(phase.start / requestTime) * 100}%`,
-                              width: `${(phase.duration / requestTime) * 100}%`,
-                              background: phase.color,
-                            }}
-                            title={`${phase.name}: ${formatTime(phase.duration)}`}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
+          {padTop > 0 && <SpacerRow height={padTop} />}
+          {visibleEntries.map((entry, offset) => (
+            <RequestRow
+              key={entry._index ?? firstVisible + offset}
+              entry={entry}
+              isSelected={selectedEntry?._index === entry._index}
+              minTime={minTime}
+              totalDuration={totalDuration}
+              onSelectEntry={onSelectEntry}
+              onClickEntry={onClickEntry}
+              onContextMenu={onContextMenu}
+            />
+          ))}
+          {padBottom > 0 && <SpacerRow height={padBottom} />}
         </tbody>
       </table>
     </div>
   );
 }
+
+// Stands in for the rows outside the virtual window so the scroll height and
+// scrollbar match the full list. Inline styles because the stylesheet gives
+// every td a row height and a bottom border.
+function SpacerRow({ height }: { height: number }) {
+  return (
+    <tr aria-hidden="true" className="row-spacer">
+      <td colSpan={COLUMN_COUNT} style={{ height, padding: 0, border: 0 }} />
+    </tr>
+  );
+}
+
+interface RequestRowProps {
+  entry: HarEntry;
+  isSelected: boolean;
+  minTime: number;
+  totalDuration: number;
+  onSelectEntry: (entry: HarEntry) => void;
+  onClickEntry: (entry: HarEntry) => void;
+  onContextMenu?: (entry: HarEntry) => void;
+}
+
+const RequestRow = memo(function RequestRow({
+  entry,
+  isSelected,
+  minTime,
+  totalDuration,
+  onSelectEntry,
+  onClickEntry,
+  onContextMenu,
+}: RequestRowProps) {
+  const name = getEntryName(entry);
+  const domain = getEntryDomain(entry);
+  const contentType = getContentType(entry);
+  const transferSize = getTransferSize(entry);
+  const isError = entry.response.status >= 400 || entry.response.status === 0;
+  const phases = computeTimingOffsets(entry);
+  const startOffset = new Date(entry.startedDateTime).getTime() - minTime;
+
+  return (
+    <tr
+      data-entry-index={entry._index}
+      className={`row ${isSelected ? "selected" : ""} ${isError ? "error-row" : ""}`}
+      onClick={() => onClickEntry(entry)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onSelectEntry(entry);
+        onContextMenu?.(entry);
+      }}
+      title={entry.request.url}
+    >
+      <td className="col-name">
+        <div className="cell-name">
+          <span className={`type-badge ${contentType}`}>
+            {getContentTypeIcon(contentType)}
+          </span>
+          <span className="cell-name-text">
+            {name}
+            {domain && <span className="cell-name-domain"> - {domain}</span>}
+          </span>
+        </div>
+      </td>
+      <td className="col-method">
+        <span
+          className="method-label"
+          style={{ color: getMethodColor(entry.request.method) }}
+        >
+          {entry.request.method}
+        </span>
+      </td>
+      <td className="col-status">
+        <span
+          className="status-code"
+          style={{ color: getStatusColor(entry.response.status) }}
+        >
+          {entry.response.status || "ERR"}
+        </span>
+      </td>
+      <td className="col-type">
+        <span className={`type-badge ${contentType}`}>{contentType}</span>
+      </td>
+      <td className="col-size">
+        <span className="size-cell">
+          {transferSize > 0 ? formatBytes(transferSize) : "-"}
+        </span>
+      </td>
+      <td className="col-time">
+        <span className="time-cell">{formatTime(entry.time)}</span>
+      </td>
+      <td className="col-waterfall">
+        <div className="waterfall-cell">
+          {/* One bar spanning the request's duration on the shared
+              capture timeline; phase segments butt-join inside it
+              so the rounded ends clip cleanly. */}
+          <div
+            className="waterfall-bar"
+            style={{
+              left: `${(startOffset / totalDuration) * 100}%`,
+              width: `${Math.max((entry.time / totalDuration) * 100, 0.2)}%`,
+            }}
+          >
+            {phases.map((phase, i) => {
+              const requestTime = entry.time || 1;
+              return (
+                <div
+                  key={i}
+                  className="waterfall-seg"
+                  style={{
+                    left: `${(phase.start / requestTime) * 100}%`,
+                    width: `${(phase.duration / requestTime) * 100}%`,
+                    background: phase.color,
+                  }}
+                  title={`${phase.name}: ${formatTime(phase.duration)}`}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </td>
+    </tr>
+  );
+});

@@ -57,8 +57,12 @@ describe("file open and interaction", () => {
       expect(rows.length).toBeGreaterThan(0);
       return rows.length;
     });
+    // The table is virtualized, so the DOM holds a window of the list rather
+    // than all of it. The toolbar reports the true total (this fixture has 48
+    // entries), which is what the row count is checked against.
     const count = await browser.$(".toolbar-count");
-    expect(await count.getText()).toContain(String(rowCount));
+    expect(await count.getText()).toContain("48");
+    expect(rowCount).toBeLessThanOrEqual(48);
   });
 
   it("shows summary stats", async () => {
@@ -153,6 +157,104 @@ describe("file open and interaction", () => {
     });
     expect(after).toBe(before);
     expect(await browser.$(".welcome-screen").isExisting()).toBe(false);
+  });
+});
+
+// The table renders only a window of rows. The arithmetic behind that window
+// is unit-tested in src/utils/virtualWindow.test.ts; these cover the parts
+// only a real browser can show — that the spacers keep rows aligned with the
+// scrollbar, and that scrolling and keyboard jumps reach rows that weren't in
+// the DOM to begin with.
+describe("large capture", () => {
+  let session: Session;
+
+  beforeAll(async () => {
+    session = await launchApp([path.join(FIXTURES, "github.com.har")]);
+  });
+
+  afterAll(async () => {
+    await session?.stop();
+  });
+
+  it("renders a window of rows, not the whole list", async () => {
+    const { browser } = session;
+    const rowCount = await eventually(async () => {
+      const rows = await browser.$$(".request-table tbody tr.row");
+      expect(rows.length).toBeGreaterThan(0);
+      return rows.length;
+    });
+    const count = await browser.$(".toolbar-count");
+    expect(await count.getText()).toContain("146");
+    expect(rowCount).toBeLessThan(146);
+
+    // The spacers still give the container the full list's scroll height.
+    const metrics = await browser.execute(() => {
+      const c = document.querySelector(
+        ".request-table-container",
+      ) as HTMLElement;
+      return { scrollHeight: c.scrollHeight, clientHeight: c.clientHeight };
+    });
+    expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight * 2);
+  });
+
+  it("renders the final entry once scrolled to the bottom", async () => {
+    const { browser } = session;
+    await browser.execute(() => {
+      const c = document.querySelector(
+        ".request-table-container",
+      ) as HTMLElement;
+      c.scrollTop = c.scrollHeight;
+    });
+
+    await eventually(async () => {
+      const last = await browser.$(
+        '.request-table tbody tr.row[data-entry-index="145"]',
+      );
+      expect(await last.isExisting()).toBe(true);
+    });
+
+    // Every rendered row exactly one row-height apart: if a spacer were
+    // mis-sized, rows would sit at the wrong offsets even while present.
+    const deltas = await browser.execute(() => {
+      const rows = Array.from(
+        document.querySelectorAll(".request-table tbody tr.row"),
+      );
+      const tops = rows.map((r) => r.getBoundingClientRect().top);
+      return Array.from(
+        new Set(tops.slice(1).map((t, i) => Math.round(t - tops[i]))),
+      );
+    });
+    expect(deltas).toHaveLength(1);
+  });
+
+  it("jumps to the final entry with End", async () => {
+    const { browser } = session;
+    const table = await browser.$(".request-table-container");
+    await table.click();
+    await browser.keys(["End"]);
+
+    await eventually(async () => {
+      const selected = await browser.$(".request-table tbody tr.row.selected");
+      expect(await selected.isExisting()).toBe(true);
+      expect(await selected.getAttribute("data-entry-index")).toBe("145");
+    });
+  });
+
+  it("jumps back to the first entry with Home", async () => {
+    const { browser } = session;
+    await browser.keys(["Home"]);
+
+    await eventually(async () => {
+      const selected = await browser.$(".request-table tbody tr.row.selected");
+      expect(await selected.getAttribute("data-entry-index")).toBe("0");
+    });
+    const scrollTop = await browser.execute(() => {
+      const c = document.querySelector(
+        ".request-table-container",
+      ) as HTMLElement;
+      return c.scrollTop;
+    });
+    expect(scrollTop).toBe(0);
   });
 });
 

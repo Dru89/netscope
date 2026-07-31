@@ -371,7 +371,13 @@ function App() {
     });
   }, [filteredEntries, sort]);
 
-  const summary = har ? computeSummary(har.log.entries) : null;
+  // Walks every entry doing per-entry content-type and date work, so it must
+  // not run on unrelated renders — filter keystrokes, row selection, panel
+  // toggles. Only the loaded file changes the result.
+  const summary = useMemo(
+    () => (har ? computeSummary(har.log.entries) : null),
+    [har],
+  );
 
   // Right-click context menu on request rows
   const handleContextMenu = useCallback(
