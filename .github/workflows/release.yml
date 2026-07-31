@@ -11,8 +11,36 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # tauri.conf.json reads its version from package.json, so a tag pushed from
+  # the wrong branch or before the version bump produces a release whose name
+  # and contents disagree — "v4.0.0" full of 3.3.0 artifacts, with a
+  # latest.json claiming 3.3.0. Fail before anything is built.
+  verify-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Tag must match package.json, and must be a stable version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME implies $TAG_VERSION but package.json says $PKG_VERSION"
+            exit 1
+          fi
+          # Prereleases belong to nightly.yml, which publishes them as
+          # prereleases. This workflow publishes stable, so a prerelease tag
+          # reaching it would mark a nightly as the latest stable release.
+          case "$TAG_VERSION" in
+            *-*)
+              echo "::error::$GITHUB_REF_NAME is a prerelease tag; this workflow publishes stable releases only"
+              exit 1
+              ;;
+          esac
+          echo "Version $PKG_VERSION matches tag $GITHUB_REF_NAME"
+
   # Run tests once before building on all platforms
   test:
+    needs: verify-version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -23,17 +51,47 @@ jobs:
       - run: npm ci
       - run: npm test
 
-  # Build and upload per platform. tauri-action creates the GitHub Release
-  # from the tag on first upload, and each platform merges its entries into
-  # the shared latest.json updater manifest on the release. The stable
-  # updater endpoint (releases/latest/download/latest.json) then serves it.
+  # Create the release up front as a draft, and hand its id to every build
+  # job. Drafts don't create the git tag and never appear as releases/latest,
+  # so the ~30-60 minutes of serialized platform builds can't expose a
+  # release with missing artifacts or a platform-incomplete latest.json — and
+  # if a build fails, what's left behind is an unpublished draft rather than a
+  # broken "latest". This is tauri-action's documented multi-platform pattern
+  # (explicit releaseId rather than letting each job find the release by tag).
+  create-release:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      release_id: ${{ steps.create.outputs.release_id }}
+    steps:
+      - name: Create draft release
+        id: create
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RELEASE_ID=$(gh api "repos/$GITHUB_REPOSITORY/releases" \
+            -f tag_name="$GITHUB_REF_NAME" \
+            -f name="$GITHUB_REF_NAME" \
+            -F draft=true \
+            -F prerelease=false \
+            -F generate_release_notes=true \
+            --jq '.id')
+          echo "release_id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
+          echo "Created draft release $RELEASE_ID for $GITHUB_REF_NAME"
+
+  # Build and upload per platform, into the draft release created above. Each
+  # platform merges its entries into the shared latest.json updater manifest
+  # on the release; once published, the stable updater endpoint
+  # (releases/latest/download/latest.json) serves it.
   #
   # Updater artifact signing needs TAURI_SIGNING_PRIVATE_KEY(_PASSWORD).
   # macOS code signing + notarization read the APPLE_* env vars; if they are
   # missing the build still succeeds but ships unsigned (same behavior as
   # the old Electron pipeline).
   build:
-    needs: test
+    needs: [test, create-release]
     permissions:
       contents: write
     strategy:
@@ -96,10 +154,7 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: ${{ github.ref_name }}
-          releaseDraft: false
-          prerelease: false
+          releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
 
       # Verify the macOS build was actually signed
@@ -125,5 +180,77 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           DEB=$(find src-tauri/target/release/bundle/deb -name "*.deb" | head -1)
+          if [ -z "$DEB" ]; then
+            echo "::error::No .deb found in src-tauri/target/release/bundle/deb"
+            exit 1
+          fi
           scripts/build-pacman.sh "$DEB" "$VERSION" dist-pacman
           gh release upload "$GITHUB_REF_NAME" dist-pacman/*.pkg.tar.zst --clobber
+
+  # Everything is built; make the release real.
+  #
+  # Before publishing, copy the 3.4.0 Electron artifacts onto this release.
+  # Netscope 3.3.x runs electron-updater, which resolves releases/latest and
+  # then fetches latest-mac.yml / latest.yml / latest-linux.yml *from that
+  # release's assets*. The moment a 4.x release becomes latest, those fetches
+  # 404 and 3.3.x shows "Update Failed" on every launch, forever, with no way
+  # to reach 4.x. Carrying the 3.4.0 manifests here means a 3.3.x client is
+  # offered 3.4.0 instead, and 3.4.0's migration bridge walks it to 4.x.
+  #
+  # The installers have to come too, not just the manifests: the manifests
+  # reference bare filenames, and electron-updater resolves them under the
+  # *latest* tag, not the tag they were built for. Only the files
+  # electron-updater actually downloads are copied (macOS takes the zips, not
+  # the dmgs — MacUpdater excludes dmg/pkg; Windows the NSIS exe; Linux the
+  # AppImage, the only Linux target electron-updater can update).
+  #
+  # This can be dropped once 3.3.x installs are gone; 3.4.x clients don't
+  # need it (their bridge reads latest.json) and a 3.4.0 client seeing these
+  # manifests sees its own version, so it's a no-op for them.
+  publish:
+    needs: [create-release, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      BRIDGE_TAG: v3.4.0
+    steps:
+      - name: Attach the 3.4.x Electron update bridge
+        run: |
+          gh release download "$BRIDGE_TAG" --dir bridge \
+            --pattern 'latest-mac.yml' \
+            --pattern 'latest.yml' \
+            --pattern 'latest-linux.yml' \
+            --pattern 'Netscope-*-mac.zip' \
+            --pattern 'Netscope-Setup-*.exe' \
+            --pattern 'Netscope-*.AppImage'
+          ls -la bridge/
+          # Every one of these is required for the 3.3.x path to work, so a
+          # missing file is a hard failure rather than a silent degradation.
+          for f in latest-mac.yml latest.yml latest-linux.yml; do
+            if [ ! -f "bridge/$f" ]; then
+              echo "::error::$f missing from $BRIDGE_TAG — 3.3.x clients would break on this release"
+              exit 1
+            fi
+          done
+          gh release upload "$GITHUB_REF_NAME" bridge/* --clobber
+
+      - name: Publish the release
+        run: |
+          gh release edit "$GITHUB_REF_NAME" --draft=false --latest
+          echo "Published $GITHUB_REF_NAME"
+
+      - name: Verify the updater manifests are all reachable
+        run: |
+          # The draft is now live, so these are the exact URLs clients hit.
+          BASE="https://github.com/$GH_REPO/releases/latest/download"
+          for f in latest.json latest-mac.yml latest.yml latest-linux.yml; do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' -L "$BASE/$f")
+            echo "$f -> $CODE"
+            if [ "$CODE" != "200" ]; then
+              echo "::error::$BASE/$f returned $CODE"
+              exit 1
+            fi
+          done
