@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeVirtualWindow } from "./virtualWindow";
+import { computeVirtualWindow, overscanForViewport } from "./virtualWindow";
 
 // Matches the real table: 26px rows, 12 rows of overscan.
 const base = { rowHeight: 26, overscan: 12 };
@@ -40,7 +40,10 @@ describe("computeVirtualWindow", () => {
   });
 
   it("renders the final entry when scrolled to the bottom", () => {
-    // Same numbers the browser produced for the 146-entry fixture.
+    // Geometry measured from the 146-entry fixture in a real browser. The
+    // overscan here is the fixed 12 these cases pass in, not what the app now
+    // derives from the viewport — this pins the windowing arithmetic, and
+    // overscanForViewport is covered separately below.
     const w = computeVirtualWindow({
       scrollTop: 3053,
       viewportHeight: 771,
@@ -108,5 +111,37 @@ describe("computeVirtualWindow", () => {
       padTop: 0,
       padBottom: 0,
     });
+  });
+});
+
+describe("overscanForViewport", () => {
+  // A fixed row count can't keep up with a fling, because how far the viewport
+  // travels before React is told scales with how much is on screen. These pin
+  // the relationship rather than the constant.
+  it("scales with the number of rows on screen", () => {
+    const small = overscanForViewport(390, 26); // 15 rows visible
+    const large = overscanForViewport(1560, 26); // 60 rows visible
+    expect(large).toBeGreaterThan(small);
+    expect(large / small).toBeCloseTo(4, 1);
+  });
+
+  it("renders more than one screenful beyond the viewport", () => {
+    const rowsOnScreen = Math.ceil(780 / 26); // 30
+    expect(overscanForViewport(780, 26)).toBeGreaterThan(rowsOnScreen);
+  });
+
+  it("never drops below the floor, whatever the geometry", () => {
+    // Tiny window, and the two states before measurement lands.
+    expect(overscanForViewport(40, 26)).toBeGreaterThanOrEqual(12);
+    expect(overscanForViewport(0, 26)).toBeGreaterThanOrEqual(12);
+    expect(overscanForViewport(780, 0)).toBeGreaterThanOrEqual(12);
+  });
+
+  it("keeps the rendered row count a small fraction of a big capture", () => {
+    // The point of virtualizing: generous overscan still can't approach the
+    // whole list.
+    const overscan = overscanForViewport(780, 26);
+    const rendered = Math.ceil(780 / 26) + overscan * 2;
+    expect(rendered).toBeLessThan(20_000 * 0.02);
   });
 });

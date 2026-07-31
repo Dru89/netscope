@@ -7,6 +7,7 @@ import {
   useState,
   memo,
 } from "react";
+import { flushSync } from "react-dom";
 import type { HarEntry, SortState, SortField } from "../types/har";
 import {
   getEntryName,
@@ -20,14 +21,12 @@ import {
   getContentTypeIcon,
   computeTimingOffsets,
 } from "../utils/har";
-import { computeVirtualWindow } from "../utils/virtualWindow";
+import {
+  computeVirtualWindow,
+  overscanForViewport,
+} from "../utils/virtualWindow";
 
 const COLUMN_COUNT = 7;
-
-// Rows outside the viewport rendered on each side. Enough that a fast scroll
-// or a keyboard jump lands on already-rendered rows, small enough that the
-// DOM stays a few dozen rows instead of thousands.
-const OVERSCAN = 12;
 
 // Only used until a real row can be measured; see syncMetrics below.
 const ESTIMATED_ROW_HEIGHT = 26;
@@ -107,13 +106,34 @@ export function RequestTable({
     setScrollTop(e.currentTarget.scrollTop);
   }, []);
 
+  // Scroll programmatically, then move the window before the browser paints.
+  //
+  // Relying on the resulting scroll event is too late twice over: the event
+  // arrives a frame or more later on WebKit's threaded scrolling, and the
+  // re-render it schedules is itself async. Either way the new scroll position
+  // gets painted with the rows that used to be there, which is the flash a
+  // Home/End jump showed. flushSync is the point of this function — a plain
+  // setState here would still land after the paint.
+  const scrollContainerTo = useCallback(
+    (top: number) => {
+      const container = containerRef.current;
+      if (!container) return;
+      container.scrollTop = Math.max(0, top);
+      // Read it back rather than reusing `top`: the browser clamps to the
+      // scrollable range, and the window has to agree with where we landed.
+      const landed = container.scrollTop;
+      flushSync(() => setScrollTop(landed));
+    },
+    [containerRef],
+  );
+
   const { firstVisible, lastVisible, padTop, padBottom } = computeVirtualWindow(
     {
       scrollTop,
       viewportHeight,
       rowHeight,
       total: entries.length,
-      overscan: OVERSCAN,
+      overscan: overscanForViewport(viewportHeight, rowHeight),
     },
   );
   const visibleEntries = entries.slice(firstVisible, lastVisible);
@@ -141,9 +161,15 @@ export function RequestTable({
 
     // Center the row in the container
     const rowTop = rowTopFor(position);
-    const target = rowTop - container.clientHeight / 2 + rowHeight / 2;
-    container.scrollTop = Math.max(0, target);
-  }, [entries, selectedEntry, containerRef, rowHeight, rowTopFor]);
+    scrollContainerTo(rowTop - container.clientHeight / 2 + rowHeight / 2);
+  }, [
+    entries,
+    selectedEntry,
+    containerRef,
+    rowHeight,
+    rowTopFor,
+    scrollContainerTo,
+  ]);
 
   // Compute waterfall boundaries
   const { minTime, maxTime } = useMemo(() => {
@@ -196,12 +222,12 @@ export function RequestTable({
       const viewTop = container.scrollTop + headerHeight;
       const viewBottom = container.scrollTop + container.clientHeight;
       if (rowTop < viewTop) {
-        container.scrollTop = Math.max(0, rowTop - headerHeight);
+        scrollContainerTo(rowTop - headerHeight);
       } else if (rowBottom > viewBottom) {
-        container.scrollTop = rowBottom - container.clientHeight;
+        scrollContainerTo(rowBottom - container.clientHeight);
       }
     },
-    [containerRef, entries, rowHeight, rowTopFor],
+    [containerRef, entries, rowHeight, rowTopFor, scrollContainerTo],
   );
 
   // Keyboard navigation within the request table
