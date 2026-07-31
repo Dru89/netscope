@@ -125,28 +125,13 @@ function App() {
     });
   }, [loadHarContent]);
 
-  // Keep a ref so handleOpenFile can read the current har value without being
-  // recreated on every file load (which would cause onRequestOpenFile to
-  // re-register its listener and drop events during the gap).
-  const harRef = useRef(har);
-  harRef.current = har;
-
-  // Handle file open dialog — reuse this window if empty, open a new one if not
-  const handleOpenFile = useCallback(async () => {
-    const result = await platform.openFileDialog();
-    if (!result) return;
-    if (harRef.current === null) {
-      loadHarContent(result.content, result.fileName);
-      void platform.registerOpenFile(result.filePath);
-    } else {
-      void platform.openFileInNewWindow(result);
-    }
-  }, [loadHarContent]);
-
-  // Listen for File > Open from the native menu
-  useEffect(() => {
-    return platform.onRequestOpenFile(() => void handleOpenFile());
-  }, [handleOpenFile]);
+  // Rust owns the picker and routes what's chosen (dedup, welcome-window
+  // reuse, new windows), so this just asks for it. File > Open doesn't come
+  // through here at all any more — the menu calls the same Rust path directly,
+  // which is what lets it work with no window open.
+  const handleOpenFile = useCallback(() => {
+    void platform.pickAndOpenFiles();
+  }, []);
 
   // Dev-only: load a fixture over HTTP in plain-browser dev, with optional
   // state params for visual work and screenshots, e.g.
