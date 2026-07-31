@@ -50,10 +50,15 @@ jobs:
 
       - run: npm ci
 
-      # pacman target requires bsdtar to build the .MTREE manifest
+      # pacman target requires bsdtar to build the .MTREE manifest.
+      # apt-get update first: the runner image's package index goes stale
+      # against the mirrors within days, and installing the indexed version
+      # then 404s. This is what failed the first v3.4.0 release build.
       - name: Install Linux build dependencies
         if: matrix.platform == 'linux'
-        run: sudo apt-get install -y libarchive-tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools
 
       # Build without publishing (--publish never). Each platform
       # produces its artifacts in release/.
