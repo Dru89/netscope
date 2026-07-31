@@ -215,14 +215,14 @@ describe("toPowerShell", () => {
     const entry = makeEntry({});
     const result = toPowerShell(entry);
     expect(result).toBe(
-      'Invoke-WebRequest -Uri "https://example.com/api/data"',
+      "Invoke-WebRequest -Uri 'https://example.com/api/data'",
     );
   });
 
   it("includes method for non-GET", () => {
     const entry = makeEntry({ method: "POST" });
     const result = toPowerShell(entry);
-    expect(result).toContain("-Method POST");
+    expect(result).toContain("-Method 'POST'");
   });
 
   it("includes headers", () => {
@@ -230,7 +230,7 @@ describe("toPowerShell", () => {
       headers: [{ name: "Accept", value: "application/json" }],
     });
     const result = toPowerShell(entry);
-    expect(result).toContain('-Headers @{ "Accept" = "application/json" }');
+    expect(result).toContain("-Headers @{ 'Accept' = 'application/json' }");
   });
 
   it("includes request body", () => {
@@ -249,6 +249,51 @@ describe("toPowerShell", () => {
     });
     const result = toPowerShell(entry);
     expect(result).toContain("it''s a test");
+  });
+
+  // The HAR is untrusted and this output is meant to be pasted into a shell,
+  // so nothing from it may end up somewhere PowerShell would evaluate.
+  describe("does not let HAR content become executable", () => {
+    it("neutralizes subexpressions in the URL", () => {
+      const entry = makeEntry({
+        url: "https://example.com/?q=$(Get-Content secret.txt)",
+      });
+      const result = toPowerShell(entry);
+      expect(result).toBe(
+        "Invoke-WebRequest -Uri 'https://example.com/?q=$(Get-Content secret.txt)'",
+      );
+      // Single-quoted, so $(...) is literal rather than evaluated
+      expect(result).not.toContain('"');
+    });
+
+    it("neutralizes variables and backticks in header values", () => {
+      const entry = makeEntry({
+        headers: [{ name: "X-Test", value: "$env:USERNAME`nwhoami" }],
+      });
+      const result = toPowerShell(entry);
+      expect(result).toContain("'X-Test' = '$env:USERNAME`nwhoami'");
+      expect(result).not.toContain('"');
+    });
+
+    it("escapes quotes in a header name so it cannot break out", () => {
+      const entry = makeEntry({
+        headers: [{ name: `X'; whoami; '`, value: "v" }],
+      });
+      const result = toPowerShell(entry);
+      expect(result).toContain(`'X''; whoami; ''' = 'v'`);
+    });
+
+    it("quotes the method, which the HAR also controls", () => {
+      const entry = makeEntry({ method: "post'; whoami; '" });
+      const result = toPowerShell(entry);
+      expect(result).toContain(`-Method 'POST''; WHOAMI; '''`);
+    });
+
+    it("escapes quotes in the URL", () => {
+      const entry = makeEntry({ url: "https://example.com/?q='; whoami; '" });
+      const result = toPowerShell(entry);
+      expect(result).toContain(`-Uri 'https://example.com/?q=''; whoami; '''`);
+    });
   });
 });
 

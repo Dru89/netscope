@@ -26,6 +26,13 @@ import "./styles/app.css";
 
 export type ThemeMode = "system" | "light" | "dark";
 
+// Start time in ms, or +Infinity when the entry has no usable timestamp, so
+// the waterfall comparator stays consistent and undated entries sort last.
+function startedAt(entry: HarEntry): number {
+  const ms = new Date(entry.startedDateTime).getTime();
+  return Number.isNaN(ms) ? Infinity : ms;
+}
+
 function App() {
   const [har, setHar] = useState<Har | null>(null);
   const [fileName, setFileName] = useState<string>("");
@@ -354,11 +361,10 @@ function App() {
         case "time":
           return dir * (a.time - b.time);
         case "waterfall":
-          return (
-            dir *
-            (new Date(a.startedDateTime).getTime() -
-              new Date(b.startedDateTime).getTime())
-          );
+          // A missing or malformed startedDateTime parses to NaN, which makes
+          // the comparator inconsistent and the resulting order arbitrary.
+          // Sort those entries to the end instead.
+          return dir * (startedAt(a) - startedAt(b));
         default:
           return 0;
       }

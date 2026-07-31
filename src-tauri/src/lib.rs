@@ -19,16 +19,33 @@ fn read_har_file(path: String) -> Option<HarFileData> {
     load_har_file(&path)
 }
 
-// Called by each window's frontend on mount to get any pre-assigned file.
+// Called by each window's frontend on mount to get the file it should show.
+//
+// Two cases, in order:
+//  1. A file pre-assigned before this window's first mount (create_window or
+//     send_file_to_window). Consumed here so the content isn't retained for
+//     the window's whole life.
+//  2. A remount of a window that already had a file — i.e. a webview reload
+//     (View > Reload). The pending entry is long gone, so re-read the file
+//     that open_files says this window is showing. Without this the window
+//     would fall back to the welcome screen while its title, proxy icon and
+//     dedup entry all still claimed the file, stranding it.
 #[tauri::command]
 fn get_window_file(window: tauri::WebviewWindow) -> Option<HarFileData> {
-    window
-        .app_handle()
-        .state::<AppState>()
-        .pending_files
+    let app = window.app_handle();
+    let state = app.state::<AppState>();
+
+    if let Some(data) = state.pending_files.lock().unwrap().remove(window.label()) {
+        return Some(data);
+    }
+
+    let path = state
+        .open_files
         .lock()
         .unwrap()
-        .remove(window.label())
+        .get(window.label())
+        .cloned()?;
+    load_har_file(path)
 }
 
 // Called by the frontend after loading a file into the current window

@@ -2,19 +2,71 @@ import type { Har, HarEntry, ContentType, SummaryStats } from "../types/har";
 
 export function parseHar(content: string): Har {
   const parsed = JSON.parse(content);
-  if (!parsed.log || !parsed.log.entries) {
+  if (!parsed.log || !Array.isArray(parsed.log.entries)) {
     throw new Error("Invalid HAR file: missing log.entries");
   }
-  // Add computed index to each entry
-  parsed.log.entries.forEach((entry: HarEntry, i: number) => {
-    entry._index = i;
-    try {
-      entry._url = new URL(entry.request.url);
-    } catch {
-      entry._url = null;
-    }
-  });
+  parsed.log.entries.forEach(normalizeEntry);
   return parsed as Har;
+}
+
+// HAR generators in the wild routinely omit fields the spec marks required:
+// aborted or blocked requests arrive with no `response`, proxies and
+// hand-rolled exporters skip `timings`, `cache`, or the cookie/header arrays,
+// and `content` can be missing entirely on a 304. The rest of the app reads
+// these through the HarEntry type and would crash on the first access, taking
+// the whole window down (an error boundary catches that, but a viewer should
+// show the file, not an apology). So patch the entry up to something that
+// actually satisfies its type, and let the missing values read as empty.
+//
+// Sentinels follow the HAR spec's own convention: -1 for "not available"
+// sizes and timings, status 0 for a request that never got a response (what
+// Chrome itself writes for failures).
+function normalizeEntry(entry: HarEntry, index: number) {
+  entry._index = index;
+
+  const request = (entry.request ?? {}) as HarEntry["request"];
+  request.method ??= "";
+  request.url ??= "";
+  request.httpVersion ??= "";
+  request.headersSize ??= -1;
+  request.bodySize ??= -1;
+  if (!Array.isArray(request.cookies)) request.cookies = [];
+  if (!Array.isArray(request.headers)) request.headers = [];
+  if (!Array.isArray(request.queryString)) request.queryString = [];
+  entry.request = request;
+
+  const response = (entry.response ?? {}) as HarEntry["response"];
+  response.status ??= 0;
+  response.statusText ??= "";
+  response.httpVersion ??= "";
+  response.redirectURL ??= "";
+  response.headersSize ??= -1;
+  response.bodySize ??= -1;
+  if (!Array.isArray(response.cookies)) response.cookies = [];
+  if (!Array.isArray(response.headers)) response.headers = [];
+  const content = (response.content ?? {}) as HarEntry["response"]["content"];
+  content.size ??= -1;
+  content.mimeType ??= "";
+  response.content = content;
+  entry.response = response;
+
+  const timings = (entry.timings ?? {}) as HarEntry["timings"];
+  timings.send ??= -1;
+  timings.wait ??= -1;
+  timings.receive ??= -1;
+  entry.timings = timings;
+
+  entry.cache ??= {};
+  entry.startedDateTime ??= "";
+  if (typeof entry.time !== "number" || !Number.isFinite(entry.time)) {
+    entry.time = 0;
+  }
+
+  try {
+    entry._url = new URL(request.url);
+  } catch {
+    entry._url = null;
+  }
 }
 
 export function getContentType(entry: HarEntry): ContentType {
