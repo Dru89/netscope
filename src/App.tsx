@@ -400,7 +400,11 @@ function App() {
 
   return (
     <div className="app" onDrop={handleDrop} onDragOver={handleDragOver}>
-      <div className="titlebar-drag-region" />
+      {/* macOS hides the native title bar (TitleBarStyle::Overlay), so the
+          window has no chrome of its own to drag by — this strip is it. The
+          data attribute is what Tauri hooks; the CSS app-region property that
+          used to be here is Electron-only and did nothing. */}
+      <div className="titlebar-drag-region" data-tauri-drag-region />
       {!har ? (
         <WelcomeScreen onOpenFile={handleOpenFile} error={error} />
       ) : (
