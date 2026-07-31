@@ -12,6 +12,33 @@ export interface VirtualWindowInput {
   overscan: number;
 }
 
+// Floor for the overscan, and the whole of it before the viewport has been
+// measured — without this the first paint would render nothing.
+const MIN_OVERSCAN = 12;
+
+// How many screenfuls to render beyond the viewport on each side.
+//
+// This is deliberately generous. macOS WebKit scrolls on the compositor
+// thread and delivers scroll events to JS afterwards, so during a hard fling
+// the viewport moves for several frames before React hears about it and can
+// widen the window. The visible symptom is rows appearing to load in. A fixed
+// row count can't express that, because the distance covered in those frames
+// scales with how much is on screen; screenfuls can.
+//
+// Two is a judgement call rather than a measured constant: one screenful was
+// still catching up on a fast fling. Rows are memoized, so the extra ones cost
+// a little reconciliation and no re-render — cheap next to the alternative.
+const OVERSCAN_VIEWPORTS = 2;
+
+export function overscanForViewport(
+  viewportHeight: number,
+  rowHeight: number,
+): number {
+  if (rowHeight <= 0 || viewportHeight <= 0) return MIN_OVERSCAN;
+  const rowsOnScreen = Math.ceil(viewportHeight / rowHeight);
+  return Math.max(MIN_OVERSCAN, rowsOnScreen * OVERSCAN_VIEWPORTS);
+}
+
 export interface VirtualWindow {
   /** Index of the first rendered row. */
   firstVisible: number;

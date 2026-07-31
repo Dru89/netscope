@@ -213,6 +213,16 @@ describe("large capture", () => {
       expect(await last.isExisting()).toBe(true);
     });
 
+    // Rows above the window were released. This is the count-independent
+    // proof that windowing is working: overscan scales with the viewport, so
+    // how many rows are rendered depends on the window size, but the first
+    // rendered index must have moved off zero.
+    const firstRenderedIndex = await browser.execute(() => {
+      const row = document.querySelector(".request-table tbody tr.row");
+      return row?.getAttribute("data-entry-index");
+    });
+    expect(Number(firstRenderedIndex)).toBeGreaterThan(0);
+
     // Every rendered row exactly one row-height apart: if a spacer were
     // mis-sized, rows would sit at the wrong offsets even while present.
     const deltas = await browser.execute(() => {
