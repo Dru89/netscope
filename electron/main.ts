@@ -8,6 +8,7 @@ import {
   Menu,
   shell,
 } from "electron";
+import { autoUpdater } from "electron-updater";
 import path from "path";
 import fs from "fs";
 import {
@@ -43,6 +44,8 @@ function removeRecentDocument(filePath: string) {
   }
 }
 let pendingFile: string | null = null;
+// A downloaded 3.4.x update waiting for a restart (electron-updater flow)
+let pendingUpdateVersion: string | null = null;
 // A Netscope 4.x version known to be available (drives the About panel note)
 let netscope4Version: string | null = null;
 
@@ -82,9 +85,17 @@ function setRemindLaterDate(date: string) {
   writePrefs(prefs);
 }
 
-// The write side of restore-after-update lived in the electron-updater flow
-// and is gone with it; the read side stays so files reopen after the final
-// electron-updater install (3.3.x wrote this before installing us).
+// Written before an update-triggered restart so the next launch can reopen
+// the same files. 3.3.x wrote this before installing us, and 3.4.x writes it
+// before installing any later 3.4.x release.
+function saveRestoreState() {
+  const filePaths = [...windowFilePaths.values()];
+  if (filePaths.length === 0) return;
+  const prefs = readPrefs();
+  prefs.restoreAfterUpdate = filePaths;
+  writePrefs(prefs);
+}
+
 function getRestoreState(): string[] | null {
   const prefs = readPrefs();
   const paths = prefs.restoreAfterUpdate as string[] | undefined;
@@ -523,34 +534,121 @@ nativeTheme.on("updated", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Netscope 4 migration (this is the 3.4.x "bridge" release)
+// Updates: two flows, one active per launch.
 //
-// Netscope 4 is a Tauri app with its own updater, so electron-updater can't
-// carry users across the boundary (different bundle ID, different artifact
-// formats, no latest-*.yml manifests on 4.x releases). Instead, this release
-// polls the Tauri updater manifest on the latest stable GitHub release and,
-// when a 4.x exists, walks the user through a one-time installer download.
-// Until 4.0 ships, the manifest URL 404s and this stays completely silent.
+// 1. electron-updater still handles ordinary 3.4.x updates, so bridge bugs
+//    can be fixed with a 3.4.1. It only runs when no Netscope 4 release
+//    exists yet (see whenReady), and its errors are silent: once a 4.x
+//    release owns "latest" on GitHub, the latest-*.yml check 404s forever
+//    and must not nag the user — the migration flow owns updates from then
+//    on. (3.3.x showed a dialog here; that was a mistake we can't unship.)
+//
+// 2. The Netscope 4 migration check (this is the 3.4.x "bridge" release).
+//    Netscope 4 is a Tauri app with its own updater, so electron-updater
+//    can't carry users across the boundary (different bundle ID, different
+//    artifact formats, no latest-*.yml manifests on 4.x releases). Instead,
+//    this release polls the Tauri updater manifest on the latest stable
+//    GitHub release and, when a 4.x exists, walks the user through a
+//    one-time installer download. Until 4.0 ships, the manifest URL 404s
+//    and this stays completely silent.
 // ---------------------------------------------------------------------------
+
+// Show download progress on the dock/taskbar
+autoUpdater.on("download-progress", (progress) => {
+  const fraction = progress.percent / 100;
+  windows.forEach((win) => {
+    win.setProgressBar(fraction);
+  });
+});
+
+// Track when a 3.4.x update has been downloaded
+autoUpdater.on("update-downloaded", (info) => {
+  // Clear progress bars
+  windows.forEach((win) => {
+    win.setProgressBar(-1);
+  });
+
+  pendingUpdateVersion = info.version;
+  updateAboutPanel();
+
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  const dialogOptions = {
+    type: "info" as const,
+    message: "Update Ready",
+    detail: `Version ${info.version} has been downloaded. Restart to install.`,
+    buttons: ["Restart Now", "Later"],
+    defaultId: 0,
+  };
+  const showDialog = focusedWindow
+    ? dialog.showMessageBox(focusedWindow, dialogOptions)
+    : dialog.showMessageBox(dialogOptions);
+  showDialog.then((result) => {
+    if (result.response === 0) {
+      saveRestoreState();
+      autoUpdater.quitAndInstall();
+    }
+  });
+});
+
+// Silent by design — see the comment block above. A mid-download failure
+// also lands here; the next launch re-prompts and retries.
+autoUpdater.on("error", (err) => {
+  console.error("Auto-update error:", err);
+  windows.forEach((win) => {
+    win.setProgressBar(-1);
+  });
+});
+
+// Prompt the user when a 3.4.x update is available (before downloading)
+autoUpdater.on("update-available", (info) => {
+  if (getSkippedVersion() === info.version) return;
+  const remindLaterDate = getRemindLaterDate();
+  if (remindLaterDate === new Date().toISOString().slice(0, 10)) return;
+
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  const dialogOptions = {
+    type: "info" as const,
+    message: "Update Available",
+    detail: `A new version of Netscope (${info.version}) is available. Would you like to download and install it?`,
+    buttons: ["Install Update", "Remind Me Later", "Skip This Version"],
+    defaultId: 0,
+  };
+  const showDialog = focusedWindow
+    ? dialog.showMessageBox(focusedWindow, dialogOptions)
+    : dialog.showMessageBox(dialogOptions);
+  showDialog.then((result) => {
+    if (result.response === 0) {
+      autoUpdater.downloadUpdate();
+    } else if (result.response === 1) {
+      setRemindLaterDate(new Date().toISOString().slice(0, 10));
+    } else if (result.response === 2) {
+      setSkippedVersion(info.version);
+    }
+  });
+});
 
 const NETSCOPE4_MANIFEST_URL =
   "https://github.com/Dru89/netscope/releases/latest/download/latest.json";
 
-async function checkForNetscope4() {
+// Returns true when a Netscope 4 release exists (the caller then skips the
+// electron-updater check — the migration flow owns updates at that point).
+async function checkForNetscope4(): Promise<boolean> {
   try {
     const res = await fetch(NETSCOPE4_MANIFEST_URL);
-    if (!res.ok) return; // no Tauri stable release yet, or offline
+    if (!res.ok) return false; // no Tauri stable release yet, or offline
     const manifest = (await res.json()) as { version?: string };
     const version = manifest.version;
-    if (!version) return;
+    if (!version) return false;
     const major = Number.parseInt(version.split(".")[0] ?? "", 10);
-    if (!Number.isFinite(major) || major < 4) return;
+    if (!Number.isFinite(major) || major < 4) return false;
 
     netscope4Version = version;
     updateAboutPanel();
     promptForMigration(version);
+    return true;
   } catch {
     // Offline or GitHub unreachable — matches the old updater's silence
+    return false;
   }
 }
 
@@ -638,9 +736,9 @@ async function downloadNetscope4(version: string) {
           message: "Installer downloaded",
           detail:
             `The Netscope ${version} installer is in your Downloads folder ` +
-            `and will open now. Drag Netscope to Applications to finish — ` +
-            `then this version can be closed.`,
-          buttons: ["Open Installer"],
+            `and will open now. Netscope will quit so the new version can ` +
+            `replace it — drag Netscope into Applications to finish.`,
+          buttons: ["Open Installer & Quit"],
           defaultId: 0,
         }
       : {
@@ -658,7 +756,9 @@ async function downloadNetscope4(version: string) {
       : dialog.showMessageBox(doneOptions);
     await showDone;
     await shell.openPath(target);
-    if (!isMac) app.quit();
+    // Quit on both platforms: the NSIS installer needs the app closed, and
+    // Finder can't replace a running app in /Applications.
+    app.quit();
   } catch (err) {
     windows.forEach((win) => win.setProgressBar(-1));
     console.error("Netscope 4 download failed:", err);
@@ -679,12 +779,14 @@ async function downloadNetscope4(version: string) {
   }
 }
 
-// Update the macOS About panel options (called on launch and when a
-// Netscope 4 release is detected)
+// Update the macOS About panel options (called on launch, when a 3.4.x
+// update is downloaded, and when a Netscope 4 release is detected)
 function updateAboutPanel() {
   const currentVersion = app.getVersion();
   let credits = "";
-  if (netscope4Version) {
+  if (pendingUpdateVersion) {
+    credits = `Version ${pendingUpdateVersion} is ready — restart to install.`;
+  } else if (netscope4Version) {
     credits = `Netscope ${netscope4Version} is available.`;
   }
   app.setAboutPanelOptions({
@@ -711,11 +813,20 @@ async function showAbout() {
     `Copyright © ${new Date().getFullYear()} Drew Hays`,
   ];
 
-  if (netscope4Version) {
+  if (pendingUpdateVersion) {
+    lines.push(
+      "",
+      `Version ${pendingUpdateVersion} is ready — restart to install.`,
+    );
+  } else if (netscope4Version) {
     lines.push("", `Netscope ${netscope4Version} is available.`);
   }
 
-  const buttons = netscope4Version ? ["Install Update", "OK"] : ["OK"];
+  const buttons = pendingUpdateVersion
+    ? ["Restart Now", "OK"]
+    : netscope4Version
+      ? ["Install Update", "OK"]
+      : ["OK"];
   const iconPath = path.join(__dirname, "..", "build", "icon.png");
   const focusedWindow = BrowserWindow.getFocusedWindow();
   const result = await dialog.showMessageBox(
@@ -729,8 +840,12 @@ async function showAbout() {
     },
   );
 
-  // "Install Update" is index 0 when a Netscope 4 release exists
-  if (netscope4Version && result.response === 0) {
+  // Index 0 is "Restart Now" when a 3.4.x update is downloaded, otherwise
+  // "Install Update" when a Netscope 4 release exists
+  if (pendingUpdateVersion && result.response === 0) {
+    saveRestoreState();
+    autoUpdater.quitAndInstall();
+  } else if (netscope4Version && result.response === 0) {
     void downloadNetscope4(netscope4Version);
   }
 }
@@ -933,8 +1048,21 @@ app.whenReady().then(() => {
   }
 
   // Check whether Netscope 4 (the Tauri successor) has shipped; silent
-  // until it has. See the migration section above.
-  void checkForNetscope4();
+  // until it has. Only fall back to electron-updater (3.4.x fixes) when it
+  // hasn't — post-4.0 that check 404s and the migration flow owns updates.
+  // See the updates section above.
+  void checkForNetscope4().then((found) => {
+    if (found) return;
+    // __BUILD_CHANNEL__ is injected at build time by vite.config.ts. Nightly
+    // builds set it to "nightly", which makes electron-updater check the
+    // nightly-*.yml manifests and accept GitHub pre-release builds.
+    autoUpdater.channel = __BUILD_CHANNEL__;
+    autoUpdater.allowPrerelease = __BUILD_CHANNEL__ !== "latest";
+    autoUpdater.autoDownload = false;
+    autoUpdater.autoInstallOnAppQuit = false;
+    autoUpdater.logger = null;
+    autoUpdater.checkForUpdates();
+  });
 });
 
 app.on("window-all-closed", () => {
