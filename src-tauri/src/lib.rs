@@ -58,39 +58,12 @@ fn register_open_file(window: tauri::WebviewWindow, file_path: String) {
     }
 }
 
-// Open a file that the frontend has already read. Focuses the existing
-// window if the file is already open; otherwise creates a new window for it.
+// Open the file picker. Rust owns the dialog so it needs no window — see
+// windows::pick_and_open_files. The chosen files are routed there, which is
+// also why there is no return value: the frontend doesn't decide anything.
 #[tauri::command]
-fn open_file_in_new_window(
-    app: tauri::AppHandle,
-    file_path: String,
-    content: String,
-    file_name: String,
-) -> tauri::Result<()> {
-    let state = app.state::<AppState>();
-    if let Ok(resolved) = std::fs::canonicalize(&file_path) {
-        if let Some(label) = state.find_window_for_file(&resolved) {
-            if let Some(window) = app.get_webview_window(&label) {
-                return window.set_focus();
-            }
-        }
-    }
-    windows::create_window(
-        &app,
-        Some(HarFileData {
-            file_path,
-            content,
-            file_name,
-        }),
-    )
-    .map(|_| ())
-}
-
-// Open the extra files of a multi-select (first one loads into the calling
-// window via the normal dialog return).
-#[tauri::command]
-fn open_paths_in_new_windows(app: tauri::AppHandle, paths: Vec<String>) {
-    windows::open_paths_in_new_windows(&app, &paths);
+fn pick_and_open_files(app: tauri::AppHandle) {
+    windows::pick_and_open_files(&app);
 }
 
 #[tauri::command]
@@ -195,8 +168,7 @@ pub fn run() {
             read_har_file,
             get_window_file,
             register_open_file,
-            open_file_in_new_window,
-            open_paths_in_new_windows,
+            pick_and_open_files,
             new_window,
             signal_ready,
             show_request_context_menu,

@@ -241,6 +241,48 @@ fn set_represented_file(app: &tauri::AppHandle, label: &str, path: &Path) {
     });
 }
 
+// File > Open, and the Open buttons in the UI.
+//
+// The picker is opened from here rather than from a webview, which means it
+// needs no window at all. That matters on macOS, where closing every window
+// leaves the app running: the JS dialog API can only be called from inside a
+// webview, so routing Cmd+O through the frontend meant a window had to be
+// restored or created purely to host the call. Cancelling now leaves nothing
+// behind, and an existing minimized window stays minimized.
+//
+// The chosen files then take the same route as a Finder double-click, so the
+// dedup / welcome-reuse / new-window rules live in exactly one place.
+pub fn pick_and_open_files(app: &tauri::AppHandle) {
+    let app = app.clone();
+    app.dialog()
+        .file()
+        .add_filter("HAR Files", &["har"])
+        .add_filter("All Files", &["*"])
+        .pick_files(move |selection| {
+            // None means cancelled — deliberately no window, no error.
+            let Some(selection) = selection else { return };
+            let paths: Vec<String> = selection
+                .into_iter()
+                .filter_map(|p| p.into_path().ok())
+                .map(|p| p.to_string_lossy().to_string())
+                .collect();
+            let Some((first, rest)) = paths.split_first() else {
+                return;
+            };
+
+            // The picker delivers its result on a worker thread, and windows
+            // can only be built on the main one.
+            let first = first.clone();
+            let rest = rest.to_vec();
+            let _ = app.clone().run_on_main_thread(move || {
+                open_file_from_path(&app, &first);
+                if !rest.is_empty() {
+                    open_paths_in_new_windows(&app, &rest);
+                }
+            });
+        });
+}
+
 // The unified entry point for OS-driven opens (file association, dock drop,
 // Open Recent, second launch, CLI): dedup → welcome-window reuse → new
 // window, with a native warning if the file is gone.

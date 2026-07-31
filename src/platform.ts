@@ -5,10 +5,7 @@
 // Each function no-ops (or falls back) when Tauri isn't present so the
 // renderer still works in plain-browser dev (`npx vite` + ?fixture=).
 
-import {
-  open as dialogOpen,
-  save as dialogSave,
-} from "@tauri-apps/plugin-dialog";
+import { save as dialogSave } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { emit, listen } from "@tauri-apps/api/event";
@@ -39,24 +36,14 @@ export type RequestContextMenuData = {
 const isTauri = () =>
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
-export async function openFileDialog(): Promise<HarFileData | null> {
-  if (!isTauri()) return null;
-
-  const selection = await dialogOpen({
-    multiple: true,
-    filters: [
-      { name: "HAR Files", extensions: ["har"] },
-      { name: "All Files", extensions: ["*"] },
-    ],
-  });
-  if (!selection) return null;
-  const paths = Array.isArray(selection) ? selection : [selection];
-  // First file loads into the calling window (via the return value);
-  // any additional selections open their own windows, deduped in Rust.
-  if (paths.length > 1) {
-    void invoke("open_paths_in_new_windows", { paths: paths.slice(1) });
-  }
-  return readHarFile(paths[0]);
+// Open the file picker. Rust shows the dialog and routes whatever is chosen
+// through the same path as a Finder double-click, so there's nothing to return
+// and no load-in-place vs. new-window decision to make here. Doing it this way
+// is what lets Cmd+O work with no window open: the JS dialog API can only be
+// called from inside a webview, so a window had to exist purely to host it.
+export async function pickAndOpenFiles(): Promise<void> {
+  if (!isTauri()) return;
+  return invoke("pick_and_open_files");
 }
 
 // Reads through Rust rather than the fs plugin: the plugin's scope only
@@ -261,18 +248,6 @@ export async function registerOpenFile(filePath: string): Promise<void> {
   return invoke("register_open_file", { filePath });
 }
 
-// Open a file in a new window. If the file is already open somewhere, focuses
-// that window instead.
-export async function openFileInNewWindow(data: HarFileData): Promise<void> {
-  if (!isTauri()) return;
-  return invoke("open_file_in_new_window", {
-    filePath: data.filePath,
-    content: data.content,
-    fileName: data.fileName,
-  });
-}
-
-// Save text (or base64-encoded binary) to a user-chosen location.
 export async function saveFile(
   suggestedName: string,
   contents: string,
@@ -294,24 +269,6 @@ export async function saveFile(
   anchor.download = suggestedName;
   anchor.click();
   URL.revokeObjectURL(anchor.href);
-}
-
-export function onRequestOpenFile(callback: () => void): () => void {
-  if (!isTauri()) return () => {};
-  let unlisten: (() => void) | undefined;
-  // Tauri 2's emit_to(EventTarget::WebviewWindow) still broadcasts to all
-  // windows, so every window receives this event. Guard with isFocused() so
-  // only the focused window acts on it.
-  listen<null>("request-open-file", () => {
-    void getCurrentWindow()
-      .isFocused()
-      .then((focused) => {
-        if (focused) callback();
-      });
-  }).then((fn) => {
-    unlisten = fn;
-  });
-  return () => unlisten?.();
 }
 
 export function onContextMenuSort(

@@ -51,6 +51,15 @@ signing, notarization, and file associations only exist on the bundled app.
       icon opens a new welcome window
 - [ ] Multi-select in the Open dialog: first file loads in place, others
       open in their own windows
+- [ ] Cmd+O with **no windows open** (close them all; the app stays running)
+      brings up the picker **without** first creating a window, and cancelling
+      leaves no empty window behind
+- [ ] Cmd+O with the only window **minimized** brings up the picker and leaves
+      that window minimized; picking a file then loads it (into that window if
+      it was an empty welcome screen, otherwise a new one)
+- [ ] Cmd+O with the app in the background (click another app, then pick
+      File > Open from Netscope's menu bar) brings the picker to the front
+- [ ] The picker still filters to `.har` with an All Files fallback
 - [ ] Right-click on a request row: native context menu; Copy as cURL puts
       a runnable command on the clipboard; Sort By shows the checked field
 - [ ] Window menu: Minimize/Zoom/Bring All to Front behave natively
