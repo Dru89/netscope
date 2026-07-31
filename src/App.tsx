@@ -57,6 +57,10 @@ function App() {
   // attribute is what the CSS keys off for an explicit Light/Dark choice;
   // System mode removes it so prefers-color-scheme decides (the pre-paint
   // script in index.html sets it before first render to avoid a flash).
+  //
+  // This deliberately doesn't broadcast: it also runs for a mode another
+  // window chose, and re-announcing that would bounce the event around.
+  // Announcing is changeThemeMode's job, below.
   useEffect(() => {
     localStorage.setItem("themeMode", themeMode);
     if (themeMode === "system") {
@@ -66,6 +70,18 @@ function App() {
     }
     void platform.setThemeMode(themeMode);
   }, [themeMode]);
+
+  // The user picked a mode in this window. Every other open window has to be
+  // told, or it keeps both its old CSS and its old native chrome until it's
+  // recreated — the persisted value alone only helps windows opened later.
+  const changeThemeMode = useCallback((mode: ThemeMode) => {
+    setThemeMode(mode);
+    void platform.broadcastThemeMode(mode);
+  }, []);
+
+  // Another window picked a mode. Setting state runs the effect above, which
+  // applies it here without re-announcing.
+  useEffect(() => platform.onThemeModeChanged(setThemeMode), []);
 
   const loadHarContent = useCallback((content: string, name: string) => {
     try {
@@ -446,7 +462,7 @@ function App() {
             <SummaryBar
               summary={summary}
               themeMode={themeMode}
-              onThemeModeChange={setThemeMode}
+              onThemeModeChange={changeThemeMode}
             />
           )}
         </div>
