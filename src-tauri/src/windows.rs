@@ -196,6 +196,7 @@ pub fn create_window(
                 if !w.is_visible().unwrap_or(true) {
                     let _ = w.show();
                 }
+                flush_pending_picker(&app);
             }
         });
     }
@@ -243,16 +244,53 @@ fn set_represented_file(app: &tauri::AppHandle, label: &str, path: &Path) {
 
 // File > Open, and the Open buttons in the UI.
 //
-// The picker is opened from here rather than from a webview, which means it
-// needs no window at all. That matters on macOS, where closing every window
-// leaves the app running: the JS dialog API can only be called from inside a
-// webview, so routing Cmd+O through the frontend meant a window had to be
-// restored or created purely to host the call. Cancelling now leaves nothing
-// behind, and an existing minimized window stays minimized.
+// Opening the picker from here rather than from a webview is what removes the
+// frontend's duplicate load-in-place-or-new-window decision: chosen files take
+// the same route as a Finder double-click, so those rules live in one place.
 //
-// The chosen files then take the same route as a Finder double-click, so the
-// dedup / welcome-reuse / new-window rules live in exactly one place.
+// It does not, however, avoid needing a window on macOS. The dialog plugin
+// presents the picker as a *sheet*, and with no parent set rfd picks the host
+// itself — NSApp.mainWindow(), else the first window in the app's list. (The
+// JS API is no better: it hard-codes the calling window as the parent. The
+// blocking variant is the same code path.) So a sheet needs a visible host,
+// which is also why a minimized window gets deminiaturized to show one.
+//
+// What we can control is *which* window, and whether it has painted. Left to
+// itself, AppKit grabbed the window our Reopen handler had just created and
+// pulled it on screen before the renderer drew anything, so the picker
+// appeared over a blank frame and cancelling left that blank frame behind.
+// With nothing open we now create the welcome window deliberately and hold the
+// picker until it reports painted, so cancelling leaves a normal welcome
+// screen.
 pub fn pick_and_open_files(app: &tauri::AppHandle) {
+    if app.webview_windows().is_empty() {
+        let state = app.state::<AppState>();
+        state.arm_pending_picker();
+        if create_window(app, None).is_err() {
+            // Don't leave the picker armed for a window that never arrives.
+            state.take_pending_picker();
+        }
+        return;
+    }
+    show_file_picker(app);
+}
+
+// Opens a picker that was waiting for a window to paint. Called from
+// signal_ready and from the visibility safety net, whichever gets there first
+// (see AppState::take_pending_picker).
+//
+// Narrow gap left deliberately: a window that exists but hasn't painted yet —
+// Cmd+O within the 800ms before a file window shows — still lets the sheet
+// attach to an unpainted frame. is_visible() can't tell that apart from
+// minimized, since AppKit reports both as not visible, and tracking paint
+// state per window costs more than the case is worth.
+pub fn flush_pending_picker(app: &tauri::AppHandle) {
+    if app.state::<AppState>().take_pending_picker() {
+        show_file_picker(app);
+    }
+}
+
+fn show_file_picker(app: &tauri::AppHandle) {
     let app = app.clone();
     app.dialog()
         .file()

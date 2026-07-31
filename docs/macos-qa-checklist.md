@@ -52,13 +52,18 @@ signing, notarization, and file associations only exist on the bundled app.
 - [ ] Multi-select in the Open dialog: first file loads in place, others
       open in their own windows
 - [ ] Cmd+O with **no windows open** (close them all; the app stays running)
-      brings up the picker **without** first creating a window, and cancelling
-      leaves no empty window behind
-- [ ] Cmd+O with the only window **minimized** brings up the picker and leaves
-      that window minimized; picking a file then loads it (into that window if
-      it was an empty welcome screen, otherwise a new one)
+      shows the picker over a **fully drawn welcome window** — not a blank
+      frame. Cancelling leaves that normal welcome window behind. A window is
+      unavoidable here: the picker is a sheet and needs a host (see
+      `pick_and_open_files`); what this checks is that it's a painted one
+- [ ] Cmd+O with the only window **minimized** un-minimizes it to host the
+      sheet. That's inherent to sheets, not a bug — what matters is that no
+      _second_ window appears, and that picking a file loads it into that
+      window if it was an empty welcome screen, or a new one otherwise
 - [ ] Cmd+O with the app in the background (click another app, then pick
-      File > Open from Netscope's menu bar) brings the picker to the front
+      File > Open from Netscope's menu bar) brings the picker to the front.
+      Activate via Cmd+Tab or the menu bar, **not** the dock icon — a dock
+      click creates a welcome window by design and would mask the result
 - [ ] The picker still filters to `.har` with an All Files fallback
 - [ ] Right-click on a request row: native context menu; Copy as cURL puts
       a runnable command on the clipboard; Sort By shows the checked field

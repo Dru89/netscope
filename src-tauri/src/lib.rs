@@ -79,6 +79,10 @@ fn signal_ready(window: tauri::WebviewWindow) {
     if !window.is_visible().unwrap_or(true) {
         let _ = window.show();
     }
+    // A File > Open that had no window to attach its sheet to is waiting for
+    // this: the window is now on screen and painted, so the picker can open
+    // over it rather than over a blank frame.
+    windows::flush_pending_picker(window.app_handle());
 }
 
 // Pop the native request-row context menu. Only the URL and sort state cross

@@ -33,6 +33,9 @@ pub struct AppState {
     // A downloaded update waiting for the user to restart (drives the About
     // panel status and its Restart Now action).
     pub pending_update: Mutex<Option<crate::update::PendingUpdate>>,
+    // Set when File > Open arrived with no window to attach its sheet to, so
+    // the picker is waiting for the window we opened to finish painting.
+    pub picker_awaiting_window: Mutex<bool>,
 }
 
 impl AppState {
@@ -48,6 +51,7 @@ impl AppState {
             recent_files: Mutex::new(Vec::new()),
             context_menu: Mutex::new(None),
             pending_update: Mutex::new(None),
+            picker_awaiting_window: Mutex::new(false),
         }
     }
 
@@ -64,5 +68,41 @@ impl AppState {
             .iter()
             .find(|(_, p)| *p == path)
             .map(|(label, _)| label.clone())
+    }
+
+    pub fn arm_pending_picker(&self) {
+        *self.picker_awaiting_window.lock().unwrap() = true;
+    }
+
+    // Claim-once: whichever path first reports a window on screen opens the
+    // picker, and the others find nothing to do. Both signal_ready and the
+    // visibility safety net call this, so an armed picker can't be lost if the
+    // renderer never signals, and can't fire twice if it does.
+    pub fn take_pending_picker(&self) -> bool {
+        let mut pending = self.picker_awaiting_window.lock().unwrap();
+        std::mem::replace(&mut *pending, false)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AppState;
+
+    #[test]
+    fn pending_picker_is_claimed_exactly_once() {
+        let state = AppState::new();
+
+        // Nothing armed: nobody opens a picker.
+        assert!(!state.take_pending_picker());
+
+        state.arm_pending_picker();
+        // First caller wins; the second (the safety net racing signal_ready,
+        // or a second window painting) must not open another picker.
+        assert!(state.take_pending_picker());
+        assert!(!state.take_pending_picker());
+
+        // Arming again after a claim works.
+        state.arm_pending_picker();
+        assert!(state.take_pending_picker());
     }
 }
