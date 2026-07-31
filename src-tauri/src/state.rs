@@ -9,6 +9,10 @@ pub struct AppState {
     pub open_files: Mutex<HashMap<String, PathBuf>>,
     // files waiting to be fetched by the frontend on mount
     pub pending_files: Mutex<HashMap<String, HarFileData>>,
+    // Label of a window created purely to service a File > Open when no
+    // window was available to hand it to. That window's frontend claims the
+    // request on mount and opens the dialog.
+    pub pending_open_request: Mutex<Option<String>>,
     // counter for generating unique window labels
     pub window_counter: Mutex<u32>,
     // label of the most-recently created window, used as a cascade fallback
@@ -40,6 +44,7 @@ impl AppState {
         Self {
             open_files: Mutex::new(HashMap::new()),
             pending_files: Mutex::new(HashMap::new()),
+            pending_open_request: Mutex::new(None),
             window_counter: Mutex::new(0),
             last_created_label: Mutex::new(None),
             last_focused_label: Mutex::new(None),
@@ -64,5 +69,43 @@ impl AppState {
             .iter()
             .find(|(_, p)| *p == path)
             .map(|(label, _)| label.clone())
+    }
+
+    // Claim the pending File > Open request, if it belongs to this window.
+    // Claim-once and label-matched: without the first, reloading the window
+    // would pop the dialog again; without the second, an unrelated window
+    // mounting first would steal it.
+    pub fn claim_open_request(&self, label: &str) -> bool {
+        let mut pending = self.pending_open_request.lock().unwrap();
+        if pending.as_deref() == Some(label) {
+            *pending = None;
+            return true;
+        }
+        false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AppState;
+
+    #[test]
+    fn claim_open_request_is_once_and_label_matched() {
+        let state = AppState::new();
+
+        // Nothing pending: nobody claims.
+        assert!(!state.claim_open_request("window-1"));
+
+        *state.pending_open_request.lock().unwrap() = Some("window-2".into());
+
+        // A different window mounting first must not take it.
+        assert!(!state.claim_open_request("window-1"));
+        assert!(!state.claim_open_request("window-3"));
+
+        // The intended window claims it exactly once — a second call is what
+        // a webview reload of that window would do.
+        assert!(state.claim_open_request("window-2"));
+        assert!(!state.claim_open_request("window-2"));
+        assert!(state.pending_open_request.lock().unwrap().is_none());
     }
 }

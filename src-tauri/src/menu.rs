@@ -1,7 +1,7 @@
 #[cfg(target_os = "macos")]
 use tauri::menu::AboutMetadata;
 use tauri::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
-use tauri::{Emitter, EventTarget, Manager, Wry};
+use tauri::{Manager, Wry};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 
@@ -254,23 +254,7 @@ pub fn handle_event(app: &tauri::AppHandle, event: MenuEvent) {
         "new_window" => {
             let _ = crate::windows::create_window(app, None);
         }
-        "open" => {
-            // Route to the focused window's frontend, which owns the dialog
-            // and the load-in-place vs. new-window decision.
-            let label = app
-                .state::<AppState>()
-                .last_focused_label
-                .lock()
-                .unwrap()
-                .clone();
-            if let Some(label) = label {
-                let _ = app.emit_to(
-                    EventTarget::WebviewWindow { label },
-                    "request-open-file",
-                    (),
-                );
-            }
-        }
+        "open" => crate::windows::request_open_file(app),
         "close_window" => {
             if let Some(window) = crate::windows::focused_window(app) {
                 let _ = window.close();

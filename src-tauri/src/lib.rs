@@ -48,6 +48,17 @@ fn get_window_file(window: tauri::WebviewWindow) -> Option<HarFileData> {
     load_har_file(path)
 }
 
+// Called on mount, right after signal_ready: was this window opened solely to
+// service a File > Open that had no window to go to? Claimed once, so a
+// reload of the same window doesn't reopen the dialog.
+#[tauri::command]
+fn take_pending_open_request(window: tauri::WebviewWindow) -> bool {
+    window
+        .app_handle()
+        .state::<AppState>()
+        .claim_open_request(window.label())
+}
+
 // Called by the frontend after loading a file into the current window
 // (dialog load-in-place, drag-and-drop): registers for dedup, sets the
 // title / macOS proxy icon, and updates the recent-files list.
@@ -194,6 +205,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             read_har_file,
             get_window_file,
+            take_pending_open_request,
             register_open_file,
             open_file_in_new_window,
             open_paths_in_new_windows,

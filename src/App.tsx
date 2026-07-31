@@ -102,10 +102,17 @@ function App() {
   // then signal ready — windows are created hidden and shown on this signal
   // so file windows never flash the welcome screen (welcome windows show as
   // soon as they've painted).
+  //
+  // Then claim any File > Open request this window was created for, which is
+  // how the menu item works when there was no window to route it to. It runs
+  // after signalReady so the dialog attaches to a window that's on screen.
   useEffect(() => {
     void platform.getWindowFile().then((data) => {
       if (data) loadHarContent(data.content, data.fileName);
       platform.signalReady();
+      void platform.takePendingOpenRequest().then((pending) => {
+        if (pending) void handleOpenFileRef.current();
+      });
     });
   }, [loadHarContent]);
 
@@ -114,6 +121,10 @@ function App() {
   // re-register its listener and drop events during the gap).
   const harRef = useRef(har);
   harRef.current = har;
+
+  // Lets the mount effect above reach handleOpenFile (defined below) without
+  // taking it as a dependency, which would re-run the file handoff.
+  const handleOpenFileRef = useRef<() => void>(() => {});
 
   // Handle file open dialog — reuse this window if empty, open a new one if not
   const handleOpenFile = useCallback(async () => {
@@ -126,6 +137,8 @@ function App() {
       void platform.openFileInNewWindow(result);
     }
   }, [loadHarContent]);
+
+  handleOpenFileRef.current = handleOpenFile;
 
   // Listen for File > Open from the native menu
   useEffect(() => {

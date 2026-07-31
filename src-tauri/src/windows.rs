@@ -98,6 +98,9 @@ fn attach_window_handler(app: &tauri::AppHandle, label: &str) {
                     let state = app_handle.state::<AppState>();
                     state.open_files.lock().unwrap().remove(&label);
                     state.pending_files.lock().unwrap().remove(&label);
+                    // Closed before it could claim its open request; drop the
+                    // label so it can't be matched by a later window.
+                    state.claim_open_request(&label);
                     state.window_positions.lock().unwrap().remove(&label);
                     state.zoom_levels.lock().unwrap().remove(&label);
                     for last in [&state.last_created_label, &state.last_focused_label] {
@@ -239,6 +242,62 @@ fn set_represented_file(app: &tauri::AppHandle, label: &str, path: &Path) {
         let ns_window = unsafe { &*(ns_ptr as *const NSWindow) };
         ns_window.setRepresentedFilename(&NSString::from_str(&path));
     });
+}
+
+#[derive(serde::Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct RequestOpenFilePayload {
+    target_label: String,
+}
+
+// File > Open is serviced by a window's frontend: it owns the dialog and the
+// load-in-place vs. new-window decision. This picks the window to hand it to.
+//
+// The focused window is the obvious target, but it isn't always there. macOS
+// keeps the app running with no windows at all, and the only window can be
+// minimized — in both cases the menu item used to find nothing and silently
+// do nothing, while New Window and Open Recent kept working. So fall back to
+// any window we know of, raising it first since the dialog attaches to it,
+// and when there are genuinely none, open one and let it claim the request on
+// mount (the same handshake get_window_file uses for pre-assigned files).
+pub fn request_open_file(app: &tauri::AppHandle) {
+    if let Some(window) = open_dialog_target(app) {
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+        let label = window.label().to_string();
+        let _ = app.emit_to(
+            EventTarget::WebviewWindow {
+                label: label.clone(),
+            },
+            "request-open-file",
+            RequestOpenFilePayload {
+                target_label: label,
+            },
+        );
+        return;
+    }
+
+    if let Ok(window) = create_window(app, None) {
+        *app.state::<AppState>().pending_open_request.lock().unwrap() =
+            Some(window.label().to_string());
+    }
+}
+
+fn open_dialog_target(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
+    if let Some(focused) = focused_window(app) {
+        return Some(focused);
+    }
+    // Nothing focused: the app may be in the background, or its only window
+    // minimized. Prefer the last window the user interacted with, then the
+    // most recently created, before settling for any of them.
+    let state = app.state::<AppState>();
+    for remembered in [&state.last_focused_label, &state.last_created_label] {
+        let label = remembered.lock().unwrap().clone();
+        if let Some(window) = label.and_then(|l| app.get_webview_window(&l)) {
+            return Some(window);
+        }
+    }
+    app.webview_windows().into_values().next()
 }
 
 // The unified entry point for OS-driven opens (file association, dock drop,

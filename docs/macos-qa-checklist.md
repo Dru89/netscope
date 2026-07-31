@@ -42,6 +42,15 @@ signing, notarization, and file associations only exist on the bundled app.
       icon opens a new welcome window
 - [ ] Multi-select in the Open dialog: first file loads in place, others
       open in their own windows
+- [ ] Cmd+O with **no windows open** (close them all; the app stays running)
+      opens a window and brings up the file dialog
+- [ ] Cmd+O with the only window **minimized** un-minimizes it and brings up
+      the dialog there, rather than doing nothing
+- [ ] Cmd+O with the app in the background (click another app, then pick
+      File > Open from Netscope's menu bar) raises a window and opens the
+      dialog
+- [ ] Cancelling that dialog leaves a usable window rather than a dead one,
+      and a second Cmd+O still works
 - [ ] Right-click on a request row: native context menu; Copy as cURL puts
       a runnable command on the clipboard; Sort By shows the checked field
 - [ ] Window menu: Minimize/Zoom/Bring All to Front behave natively

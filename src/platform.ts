@@ -261,18 +261,26 @@ export function onRequestOpenFile(callback: () => void): () => void {
   if (!isTauri()) return () => {};
   let unlisten: (() => void) | undefined;
   // Tauri 2's emit_to(EventTarget::WebviewWindow) still broadcasts to all
-  // windows, so every window receives this event. Guard with isFocused() so
-  // only the focused window acts on it.
-  listen<null>("request-open-file", () => {
-    void getCurrentWindow()
-      .isFocused()
-      .then((focused) => {
-        if (focused) callback();
-      });
+  // windows, so every window receives this event and has to check whether it
+  // was the intended one. Compare the target label (as the context-menu
+  // events do) rather than asking isFocused(): the backend picks the target
+  // and may deliberately have raised it out of a minimized state, where
+  // isFocused() would still be false and the request would be dropped.
+  listen<{ targetLabel?: string }>("request-open-file", (event) => {
+    const targetLabel = event.payload?.targetLabel;
+    if (targetLabel && targetLabel !== getCurrentWindow().label) return;
+    callback();
   }).then((fn) => {
     unlisten = fn;
   });
   return () => unlisten?.();
+}
+
+// Claims the open request belonging to a window the backend created because
+// File > Open had no window to route to. Returns false for every other window.
+export async function takePendingOpenRequest(): Promise<boolean> {
+  if (!isTauri()) return false;
+  return invoke("take_pending_open_request");
 }
 
 export function onContextMenuSort(
