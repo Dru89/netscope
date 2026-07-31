@@ -10,8 +10,13 @@
   background: var(--ns-bg);
 }
 
+/* Dragging is driven by the data-tauri-drag-region attribute on this element,
+   not by CSS: -webkit-app-region is an Electron property and has no effect in
+   a Tauri webview. It also has to receive pointer events to be grabbable —
+   the toolbar reserves this same height as padding-top, so nothing
+   interactive sits underneath. Height is 0 off macOS, where the system title
+   bar handles dragging. */
 .titlebar-drag-region {
-  -webkit-app-region: drag;
   height: var(--titlebar-height);
   min-height: var(--titlebar-height);
   position: absolute;
@@ -19,7 +24,6 @@
   left: 0;
   right: 0;
   z-index: 100;
-  pointer-events: none;
 }
 
 .app-content {

@@ -36,6 +36,15 @@ signing, notarization, and file associations only exist on the bundled app.
 
 ## Windows & menus
 
+- [ ] **The window can be dragged** by the empty strip beside the traffic
+      lights, on both the welcome screen and with a file open. macOS hides the
+      native title bar, so this strip is the only draggable chrome — and it
+      needs the `data-tauri-drag-region` attribute, pointer events, _and_ the
+      `core:window:allow-start-dragging` capability, any one of which silently
+      kills it
+- [ ] Double-clicking that strip zooms/unzooms the window
+- [ ] Clicking just below the strip still works: the Open button, the filter
+      input, and the first table row are not swallowed by it
 - [ ] New windows cascade down-right from the focused window
 - [ ] Cmd+N opens exactly **one** window; Cmd+W closes exactly one
 - [ ] Closing the last window leaves the app running; clicking the dock
