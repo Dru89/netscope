@@ -67,15 +67,41 @@ differ, and setting the secret name locally silently does nothing:
 | `APPLE_CERTIFICATE`          | `MAC_CERTIFICATE_BASE64`      |
 | `APPLE_CERTIFICATE_PASSWORD` | `MAC_CERTIFICATE_PASSWORD`    |
 
-For a signed local build on a Mac, the Developer ID certificate comes from
-your login keychain, so you don't need `APPLE_CERTIFICATE` at all — only
-`APPLE_SIGNING_IDENTITY` to pick it (`tauri.conf.json` has no
-`signingIdentity` key, so that variable is the only thing that selects it).
-Confirm what you have with `security find-identity -v -p codesigning`,
-then:
+Local signing is not a separate code path from CI. The Tauri CLI reads
+`APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`
+and the notarization variables itself, and does the keychain import itself
+— `tauri-action` only supplies values. There are two ways to hand it the
+certificate.
+
+**From your login keychain** (what you want on your own Mac). Import the
+`.p12` once by double-clicking it in Finder, then confirm it landed:
+
+```bash
+security find-identity -v -p codesigning
+```
+
+Set `APPLE_SIGNING_IDENTITY` to a substring of the certificate name that
+matches exactly one identity. `Developer ID Application` is normally enough
+and is what CI uses; if you ever hold two of them (renewal overlap does
+this), codesign fails as ambiguous and you need the full
+`Developer ID Application: Your Name (TEAMID)` or the SHA-1. Expired
+`Apple Development` certificates in the list don't collide with it.
+`tauri.conf.json` has no `signingIdentity` key, so this variable is the
+only thing selecting the certificate. Then:
 
 ```bash
 make package
+```
+
+**From a base64 blob, the way CI does it.** Set `APPLE_CERTIFICATE` to the
+base64 of the `.p12` and `APPLE_CERTIFICATE_PASSWORD` to its export
+password; the CLI builds a temporary keychain from them. CI has to work
+this way because it has no login keychain. Locally it's worth knowing when
+you're reproducing a CI signing failure, but it puts the `.p12` password in
+a file on disk — prefer the keychain above for day-to-day work.
+
+```bash
+base64 -i certificate.p12 | pbcopy
 ```
 
 Without the signing key, build a real `.app` like this:
