@@ -85,7 +85,9 @@ make site-dev         # Astro dev server for the marketing site
 make site-build       # Build the marketing site
 ```
 
-Production builds with the updater enabled need `TAURI_SIGNING_PRIVATE_KEY` (+`_PASSWORD`) in the environment; CI has them as secrets.
+Production builds with the updater enabled need `TAURI_SIGNING_PRIVATE_KEY` (+`_PASSWORD`) in the environment; CI has them as secrets. Nothing loads a `.env` file — the Tauri CLI has no dotenv support — so export them or pass them inline.
+
+For a local test build without the key, use `npx tauri build --no-sign --bundles app`. `--no-bundle` produces no `.app` and is only for the bare binary (CI and `make test-e2e`). See `docs/development.md`.
 
 ## Testing
 
@@ -218,7 +220,7 @@ Nightly (`nightly.yml`): daily cron + pushes to `nightly` + manual dispatch → 
 | Secret                               | Purpose                                      |
 | ------------------------------------ | -------------------------------------------- |
 | `TAURI_SIGNING_PRIVATE_KEY`          | Updater artifact signing (minisign)          |
-| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for the key (empty string)          |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for the key — set, but empty        |
 | `MAC_CERTIFICATE_BASE64`             | Base64-encoded .p12 Developer ID certificate |
 | `MAC_CERTIFICATE_PASSWORD`           | Password for the .p12                        |
 | `APPLE_ID`                           | Apple ID email for notarization              |

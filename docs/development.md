@@ -44,9 +44,34 @@ cargo test --manifest-path src-tauri/Cargo.toml
 `make` targets wrap these plus `make icons`, `make release`, and
 `make test-e2e` — see the Makefile.
 
+### Local production builds
+
 Production builds with the updater enabled need
 `TAURI_SIGNING_PRIVATE_KEY` (and `_PASSWORD`) in the environment.
-Without them, use `npx tauri build --no-bundle` for a bare binary.
+
+**Nothing in this project reads a `.env` file.** The Tauri CLI has no
+dotenv support, and `dotenv` isn't a dependency here (it was under
+Electron; it isn't now). Export the variables in your shell, or pass them
+inline on the command line — a `.env` you create will be silently ignored.
+See `.env.example` for the full list.
+
+Without the signing key, build a real `.app` like this:
+
+```bash
+npx tauri build --no-sign --bundles app
+```
+
+`--no-sign` skips updater signing, so no key is needed. `--bundles app`
+narrows the output to the `.app`, skipping the DMG step — that one mounts
+a volume and drives Finder via AppleScript, which is slow and fragile.
+
+Use `--no-bundle` only when you want the bare binary and no `.app` at all;
+it's what CI and `make test-e2e` use, and it is _not_ what you want for
+testing file associations, the dock, or Finder double-click.
+
+Drag the resulting `.app` into /Applications before testing file
+associations — Launch Services is unreliable about registering an app that
+lives under `target/`.
 
 ## Tech stack
 
@@ -86,9 +111,15 @@ rolling `nightly` release carries the updater manifest for that channel.
 | `APPLE_APP_SPECIFIC_PASSWORD`        | App-specific password for notarization       |
 | `APPLE_TEAM_ID`                      | Apple Developer Team ID                      |
 
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` must be _set_ even when the key has no
+password — set it to an empty string. Leaving it unset is not equivalent:
+the CLI stops and waits on an interactive prompt, logging "Decrypting
+updater signing key, expect a prompt for password". In CI that reads as a
+hang, not an error.
+
 `GITHUB_TOKEN` is provided automatically. If macOS secrets are missing the
 build still succeeds but ships unsigned; if the updater key is missing,
-bundling fails (build with `--no-bundle` locally instead).
+bundling fails (build with `--no-sign` locally instead).
 
 ### Auto-updates
 
