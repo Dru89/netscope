@@ -18,6 +18,23 @@ import {
 import { highlightJson } from "../utils/highlightJson";
 import * as platform from "../platform";
 
+// The key column is a fixed 170px that ellipsizes, so a long header name is
+// cut with no way to read it — every access-control-* header truncates at the
+// same point. The title restores it on hover; clicking wraps the name in
+// place, mirroring how ClampedValue expands a long value.
+function ClampedKey({ children }: { children: string }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <td
+      className={`clamped-key ${expanded ? "expanded" : ""}`}
+      title={children}
+      onClick={() => setExpanded((v) => !v)}
+    >
+      {children}
+    </td>
+  );
+}
+
 // A key/value cell that clamps long values to 3 lines and expands on click.
 function ClampedValue({ children }: { children: React.ReactNode }) {
   const [expanded, setExpanded] = useState(false);
@@ -196,7 +213,7 @@ function HeadersTab({ entry }: { entry: HarEntry }) {
             <tbody>
               {entry.response.headers.map((header, i) => (
                 <tr key={i}>
-                  <td>{header.name}</td>
+                  <ClampedKey>{header.name}</ClampedKey>
                   <ClampedValue>{header.value}</ClampedValue>
                 </tr>
               ))}
@@ -215,7 +232,7 @@ function HeadersTab({ entry }: { entry: HarEntry }) {
             <tbody>
               {entry.request.headers.map((header, i) => (
                 <tr key={i}>
-                  <td>{header.name}</td>
+                  <ClampedKey>{header.name}</ClampedKey>
                   <ClampedValue>{header.value}</ClampedValue>
                 </tr>
               ))}
@@ -242,7 +259,7 @@ function PayloadTab({ entry }: { entry: HarEntry }) {
             <tbody>
               {queryParams.map((param, i) => (
                 <tr key={i}>
-                  <td>{param.name}</td>
+                  <ClampedKey>{param.name}</ClampedKey>
                   <ClampedValue>{param.value}</ClampedValue>
                 </tr>
               ))}
@@ -270,7 +287,7 @@ function PayloadTab({ entry }: { entry: HarEntry }) {
               <tbody>
                 {postData.params.map((param, i) => (
                   <tr key={i}>
-                    <td>{param.name}</td>
+                    <ClampedKey>{param.name}</ClampedKey>
                     <td>{param.value || param.fileName || ""}</td>
                   </tr>
                 ))}
@@ -510,7 +527,7 @@ function CookiesTab({ entry }: { entry: HarEntry }) {
             <tbody>
               {requestCookies.map((cookie, i) => (
                 <tr key={i}>
-                  <td>{cookie.name}</td>
+                  <ClampedKey>{cookie.name}</ClampedKey>
                   <ClampedValue>{cookie.value}</ClampedValue>
                 </tr>
               ))}
@@ -528,7 +545,7 @@ function CookiesTab({ entry }: { entry: HarEntry }) {
             <tbody>
               {responseCookies.map((cookie, i) => (
                 <tr key={i}>
-                  <td>{cookie.name}</td>
+                  <ClampedKey>{cookie.name}</ClampedKey>
                   <td>
                     {cookie.value}
                     {cookie.domain && (

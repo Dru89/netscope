@@ -834,6 +834,19 @@
   -webkit-line-clamp: unset;
 }
 
+/* Keys ellipsize in the fixed 170px column above, which loses the name
+   outright — every access-control-* header cuts at the same point. Clicking
+   wraps the full name inside the column rather than widening it, so the
+   value column and every other row stay where they are. */
+.detail-table td.clamped-key {
+  cursor: pointer;
+}
+
+.detail-table td.clamped-key.expanded {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* ============ Response tab ============ */
 
 .response-meta {

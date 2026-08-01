@@ -16,6 +16,13 @@ export interface FakeEntry {
   time?: number;
   mimeType?: string;
   startedDateTime?: string;
+  requestHeaders?: NameValue[];
+  responseHeaders?: NameValue[];
+}
+
+export interface NameValue {
+  name: string;
+  value: string;
 }
 
 export function makeHar(entries: FakeEntry[]): string {
@@ -32,7 +39,7 @@ export function makeHar(entries: FakeEntry[]): string {
           method: e.method ?? "GET",
           url: e.url,
           httpVersion: "HTTP/1.1",
-          headers: [],
+          headers: e.requestHeaders ?? [],
           queryString: [],
           cookies: [],
           headersSize: -1,
@@ -42,7 +49,7 @@ export function makeHar(entries: FakeEntry[]): string {
           status: e.status ?? 200,
           statusText: "OK",
           httpVersion: "HTTP/1.1",
-          headers: [],
+          headers: e.responseHeaders ?? [],
           cookies: [],
           content: {
             size: e.size,
