@@ -60,6 +60,15 @@
   display: none;
 }
 
+/* Waterfall is the only auto-width column, so under table-layout: fixed it's
+   the one absorbing whatever the fixed-px columns don't claim. Hiding it
+   leaves Name's 40% plus 204px of Method/Status/Time short of the table
+   width, and the slack pools as dead space after Time. Name takes it here
+   instead — it's the column with something to do with the room. */
+.request-list-pane.with-detail .col-name {
+  width: auto;
+}
+
 .detail-pane {
   width: 50%;
   min-width: 400px;
