@@ -133,10 +133,14 @@ export function DetailPanel({ entry, onClose, initialTab }: DetailPanelProps) {
       >
         {activeTab === "headers" && <HeadersTab entry={entry} />}
         {activeTab === "payload" && <PayloadTab entry={entry} />}
-        {activeTab === "response" && <ResponseTab entry={entry} />}
+        {activeTab === "response" && (
+          <ResponseTab key={entry._index} entry={entry} />
+        )}
         {activeTab === "timing" && <TimingTab entry={entry} />}
         {activeTab === "cookies" && <CookiesTab entry={entry} />}
-        {activeTab === "source" && <SourceTab entry={entry} />}
+        {activeTab === "source" && (
+          <SourceTab key={entry._index} entry={entry} />
+        )}
       </div>
     </div>
   );
@@ -592,7 +596,6 @@ function SourceTab({ entry }: { entry: HarEntry }) {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [matchIndex, setMatchIndex] = useState(0);
-  const [matchCount, setMatchCount] = useState(0);
   const contentRef = useRef<HTMLPreElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchVisible, setSearchVisible] = useState(false);
@@ -615,10 +618,18 @@ function SourceTab({ entry }: { entry: HarEntry }) {
     [source],
   );
 
+  // Derived from the current source rather than captured when the query was
+  // typed, so the counter can never describe a document that is no longer on
+  // screen — which is what happened when the tab outlived a selection change.
+  const matches = useMemo(
+    () => findMatches(searchQuery),
+    [findMatches, searchQuery],
+  );
+  const matchCount = matches.length;
+
   // Build highlighted content with matches wrapped in <mark> elements
   const highlightedContent = useMemo(() => {
     if (!searchQuery) return source;
-    const matches = findMatches(searchQuery);
     if (matches.length === 0) return source;
 
     const parts: string[] = [];
@@ -636,7 +647,7 @@ function SourceTab({ entry }: { entry: HarEntry }) {
     });
     parts.push(escapeHtml(source.substring(lastEnd)));
     return parts.join("");
-  }, [source, searchQuery, matchIndex, findMatches]);
+  }, [source, searchQuery, matchIndex, matches]);
 
   const scrollToCurrentMatch = useCallback(() => {
     if (!contentRef.current) return;
@@ -660,15 +671,10 @@ function SourceTab({ entry }: { entry: HarEntry }) {
     matchCount,
   ]);
 
-  const handleSearch = useCallback(
-    (query: string) => {
-      setSearchQuery(query);
-      const matches = findMatches(query);
-      setMatchCount(matches.length);
-      setMatchIndex(0);
-    },
-    [findMatches],
-  );
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    setMatchIndex(0);
+  }, []);
 
   const handleNextMatch = useCallback(() => {
     if (matchCount === 0) return;
