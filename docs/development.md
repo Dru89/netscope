@@ -49,11 +49,34 @@ cargo test --manifest-path src-tauri/Cargo.toml
 Production builds with the updater enabled need
 `TAURI_SIGNING_PRIVATE_KEY` (and `_PASSWORD`) in the environment.
 
-**Nothing in this project reads a `.env` file.** The Tauri CLI has no
-dotenv support, and `dotenv` isn't a dependency here (it was under
-Electron; it isn't now). Export the variables in your shell, or pass them
-inline on the command line — a `.env` you create will be silently ignored.
-See `.env.example` for the full list.
+The Tauri CLI has no dotenv support, so **`make package` is what loads
+`.env`** (`set -a` around a `.` of the file). A bare `npx tauri build`
+reads nothing from it. Copy `.env.example` to `.env` and fill it in, or
+export the variables yourself:
+
+```bash
+set -a; . ./.env; set +a
+```
+
+**The variable names are not the GitHub secret names.** Three of them
+differ, and setting the secret name locally silently does nothing:
+
+| Local variable               | GitHub secret                 |
+| ---------------------------- | ----------------------------- |
+| `APPLE_PASSWORD`             | `APPLE_APP_SPECIFIC_PASSWORD` |
+| `APPLE_CERTIFICATE`          | `MAC_CERTIFICATE_BASE64`      |
+| `APPLE_CERTIFICATE_PASSWORD` | `MAC_CERTIFICATE_PASSWORD`    |
+
+For a signed local build on a Mac, the Developer ID certificate comes from
+your login keychain, so you don't need `APPLE_CERTIFICATE` at all — only
+`APPLE_SIGNING_IDENTITY` to pick it (`tauri.conf.json` has no
+`signingIdentity` key, so that variable is the only thing that selects it).
+Confirm what you have with `security find-identity -v -p codesigning`,
+then:
+
+```bash
+make package
+```
 
 Without the signing key, build a real `.app` like this:
 

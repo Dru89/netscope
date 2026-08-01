@@ -85,7 +85,7 @@ make site-dev         # Astro dev server for the marketing site
 make site-build       # Build the marketing site
 ```
 
-Production builds with the updater enabled need `TAURI_SIGNING_PRIVATE_KEY` (+`_PASSWORD`) in the environment; CI has them as secrets. Nothing loads a `.env` file — the Tauri CLI has no dotenv support — so export them or pass them inline.
+Production builds with the updater enabled need `TAURI_SIGNING_PRIVATE_KEY` (+`_PASSWORD`) in the environment; CI has them as secrets. The Tauri CLI has no dotenv support, so `make package` is what loads `.env` — a bare `npx tauri build` reads nothing from it. Local variable names differ from the GitHub secret names for the Apple credentials (`APPLE_PASSWORD` vs `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_CERTIFICATE*` vs `MAC_CERTIFICATE_*`); see `.env.example`.
 
 For a local test build without the key, use `npx tauri build --no-sign --bundles app`. `--no-bundle` produces no `.app` and is only for the bare binary (CI and `make test-e2e`). See `docs/development.md`.
 
