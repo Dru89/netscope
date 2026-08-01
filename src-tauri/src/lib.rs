@@ -32,7 +32,7 @@ fn read_har_file(path: String) -> Option<HarFileData> {
 //     would fall back to the welcome screen while its title, proxy icon and
 //     dedup entry all still claimed the file, stranding it.
 #[tauri::command]
-fn get_window_file(window: tauri::WebviewWindow) -> Option<HarFileData> {
+fn get_window_file<R: tauri::Runtime>(window: tauri::WebviewWindow<R>) -> Option<HarFileData> {
     let app = window.app_handle();
     let state = app.state::<AppState>();
 
@@ -419,5 +419,169 @@ mod argv_tests {
         let found = find_har_arg(argv(&[first.to_str().unwrap(), "b.har"]), dir.path());
 
         assert_eq!(found, Some(first.to_string_lossy().into_owned()));
+    }
+}
+
+// Window-scoped command tests on Tauri's mock runtime. These need no webview
+// and no display, so they run on macOS where tauri-driver can't (see #13).
+//
+// The target is get_window_file's interaction with pending_files and
+// open_files, which is where the reload bug fixed in #3 lived: a window that
+// had already consumed its pending file came back empty after a reload,
+// because nothing fell back to the path registered for it.
+#[cfg(test)]
+mod window_file_tests {
+    use super::*;
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use tauri::test::{mock_builder, mock_context, noop_assets};
+    use tauri::{WebviewUrl, WebviewWindowBuilder};
+
+    static COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    struct Scratch(PathBuf);
+
+    impl Scratch {
+        fn new() -> Self {
+            let dir = std::env::temp_dir().join(format!(
+                "netscope-winfile-{}-{}",
+                std::process::id(),
+                COUNTER.fetch_add(1, Ordering::Relaxed)
+            ));
+            std::fs::create_dir_all(&dir).expect("create scratch dir");
+            Scratch(dir)
+        }
+
+        fn har(&self, name: &str, body: &str) -> PathBuf {
+            let path = self.0.join(name);
+            std::fs::write(&path, body).expect("write scratch har");
+            std::fs::canonicalize(&path).expect("canonicalize scratch har")
+        }
+    }
+
+    impl Drop for Scratch {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    /// A mock app with our state attached. noop_assets keeps this independent
+    /// of whether the renderer has been built.
+    fn app() -> tauri::App<tauri::test::MockRuntime> {
+        mock_builder()
+            .manage(AppState::new())
+            .build(mock_context(noop_assets()))
+            .expect("build mock app")
+    }
+
+    fn window(
+        app: &tauri::App<tauri::test::MockRuntime>,
+        label: &str,
+    ) -> tauri::WebviewWindow<tauri::test::MockRuntime> {
+        WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()))
+            .build()
+            .expect("build mock window")
+    }
+
+    fn pending(app: &tauri::App<tauri::test::MockRuntime>, label: &str, content: &str) {
+        app.state::<AppState>()
+            .pending_files
+            .lock()
+            .unwrap()
+            .insert(
+                label.to_string(),
+                HarFileData {
+                    file_path: format!("/tmp/{label}.har"),
+                    content: content.to_string(),
+                    file_name: format!("{label}.har"),
+                },
+            );
+    }
+
+    #[test]
+    fn a_pending_file_is_served_once_and_then_consumed() {
+        let app = app();
+        let win = window(&app, "window-1");
+        pending(&app, "window-1", r#"{"log":{"entries":[]}}"#);
+
+        let first = get_window_file(win.clone()).expect("pending file on first call");
+        assert_eq!(first.content, r#"{"log":{"entries":[]}}"#);
+
+        // The map is a hand-off, not a cache.
+        assert!(app
+            .state::<AppState>()
+            .pending_files
+            .lock()
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn a_reload_falls_back_to_the_registered_path() {
+        let dir = Scratch::new();
+        let file = dir.har("trace.har", r#"{"log":{"entries":[1]}}"#);
+
+        let app = app();
+        let win = window(&app, "window-1");
+        pending(&app, "window-1", "handed over on first mount");
+        app.state::<AppState>()
+            .open_files
+            .lock()
+            .unwrap()
+            .insert("window-1".into(), file.clone());
+
+        // First mount consumes the hand-off.
+        assert_eq!(
+            get_window_file(win.clone()).unwrap().content,
+            "handed over on first mount"
+        );
+
+        // Reloading the webview mounts again with nothing pending. This is #3:
+        // without the open_files fallback the window came back empty.
+        let after_reload = get_window_file(win).expect("window stranded after reload");
+        assert_eq!(after_reload.content, r#"{"log":{"entries":[1]}}"#);
+        assert_eq!(after_reload.file_path, file.to_string_lossy());
+    }
+
+    #[test]
+    fn a_window_with_nothing_registered_gets_nothing() {
+        let app = app();
+        let win = window(&app, "window-1");
+
+        assert!(get_window_file(win).is_none());
+    }
+
+    #[test]
+    fn a_pending_file_belongs_to_one_window_only() {
+        let app = app();
+        let first = window(&app, "window-1");
+        let second = window(&app, "window-2");
+        pending(&app, "window-1", "for the first window");
+
+        assert!(
+            get_window_file(second).is_none(),
+            "a second window must not pick up another's hand-off"
+        );
+        assert_eq!(
+            get_window_file(first).unwrap().content,
+            "for the first window"
+        );
+    }
+
+    #[test]
+    fn a_registered_path_that_has_gone_away_yields_nothing() {
+        let dir = Scratch::new();
+        let file = dir.har("trace.har", "{}");
+        let app = app();
+        let win = window(&app, "window-1");
+        app.state::<AppState>()
+            .open_files
+            .lock()
+            .unwrap()
+            .insert("window-1".into(), file.clone());
+        std::fs::remove_file(&file).unwrap();
+
+        // Deleted under us between mounts: no data, and no panic.
+        assert!(get_window_file(win).is_none());
     }
 }

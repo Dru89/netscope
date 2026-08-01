@@ -29,6 +29,12 @@ tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
 base64 = "0.22"
 
+# The mock runtime (tauri::test) lets window-scoped commands be driven
+# natively on any platform, with no webview. Dev-only: resolver v2 keeps the
+# "test" feature out of normal builds.
+[dev-dependencies]
+tauri = { version = "2.11.1", features = ["test"] }
+
 # OS recent-documents integration (Electron's app.addRecentDocument parity).
 # Versions match what tauri/tao/wry already pull in.
 [target.'cfg(target_os = "macos")'.dependencies]
