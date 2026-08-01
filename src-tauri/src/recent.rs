@@ -73,9 +73,7 @@ fn persist(app: &tauri::AppHandle) {
     let mut prefs = prefs::read_prefs(app);
     prefs.insert(
         PREFS_KEY.to_string(),
-        serde_json::Value::Array(
-            recent.into_iter().map(serde_json::Value::String).collect(),
-        ),
+        serde_json::Value::Array(recent.into_iter().map(serde_json::Value::String).collect()),
     );
     prefs::write_prefs(app, &prefs);
 }
@@ -91,7 +89,9 @@ fn os_note_recent(app: &tauri::AppHandle, path: &Path) {
         use objc2::MainThreadMarker;
         use objc2_app_kit::NSDocumentController;
         use objc2_foundation::{NSString, NSURL};
-        let Some(mtm) = MainThreadMarker::new() else { return };
+        let Some(mtm) = MainThreadMarker::new() else {
+            return;
+        };
         let url = NSURL::fileURLWithPath(&NSString::from_str(&path));
         NSDocumentController::sharedDocumentController(mtm).noteNewRecentDocumentURL(&url);
     });
@@ -102,7 +102,9 @@ fn os_clear_recent(app: &tauri::AppHandle, _previous: &[String]) {
     let _ = app.run_on_main_thread(move || {
         use objc2::MainThreadMarker;
         use objc2_app_kit::NSDocumentController;
-        let Some(mtm) = MainThreadMarker::new() else { return };
+        let Some(mtm) = MainThreadMarker::new() else {
+            return;
+        };
         unsafe {
             NSDocumentController::sharedDocumentController(mtm).clearRecentDocuments(None);
         }
@@ -124,10 +126,11 @@ fn os_note_recent(app: &tauri::AppHandle, path: &Path) {
 #[cfg(target_os = "linux")]
 fn os_clear_recent(app: &tauri::AppHandle, previous: &[String]) {
     // GTK's purge would wipe other apps' entries too, so remove only ours.
-    let previous: Vec<std::path::PathBuf> =
-        previous.iter().map(std::path::PathBuf::from).collect();
+    let previous: Vec<std::path::PathBuf> = previous.iter().map(std::path::PathBuf::from).collect();
     let _ = app.run_on_main_thread(move || {
-        let Some(manager) = gtk::RecentManager::default() else { return };
+        let Some(manager) = gtk::RecentManager::default() else {
+            return;
+        };
         for path in &previous {
             if let Ok(uri) = gtk::glib::filename_to_uri(path, None) {
                 let _ = gtk::prelude::RecentManagerExt::remove_item(&manager, &uri);

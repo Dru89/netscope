@@ -148,15 +148,14 @@ pub fn create_window(
     }
 
     #[allow(unused_mut)]
-    let mut builder =
-        WebviewWindowBuilder::new(app, &label, WebviewUrl::App("index.html".into()))
-            .title(&title)
-            .inner_size(1400.0, 900.0)
-            .min_inner_size(900.0, 600.0)
-            // Hidden until the renderer signals ready (or the timeout below
-            // fires) — no flash of the welcome screen before file content,
-            // and no white flash before first paint in dark mode.
-            .visible(false);
+    let mut builder = WebviewWindowBuilder::new(app, &label, WebviewUrl::App("index.html".into()))
+        .title(&title)
+        .inner_size(1400.0, 900.0)
+        .min_inner_size(900.0, 600.0)
+        // Hidden until the renderer signals ready (or the timeout below
+        // fires) — no flash of the welcome screen before file content,
+        // and no white flash before first paint in dark mode.
+        .visible(false);
 
     #[cfg(target_os = "macos")]
     {
@@ -236,7 +235,9 @@ fn set_represented_file(app: &tauri::AppHandle, label: &str, path: &Path) {
         let Some(window) = app.get_webview_window(&label) else {
             return;
         };
-        let Ok(ns_ptr) = window.ns_window() else { return };
+        let Ok(ns_ptr) = window.ns_window() else {
+            return;
+        };
         let ns_window = unsafe { &*(ns_ptr as *const NSWindow) };
         ns_window.setRepresentedFilename(&NSString::from_str(&path));
     });
@@ -466,4 +467,3 @@ pub fn show_open_error(app: &tauri::AppHandle, path: &Path, not_found: bool) {
     }
     dialog.show(|_| {});
 }
-

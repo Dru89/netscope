@@ -98,10 +98,7 @@ fn prompt_for_update(app: tauri::AppHandle, update: tauri_plugin_updater::Update
             }
             BTN_SKIP => {
                 let mut preferences = prefs::read_prefs(&app);
-                preferences.insert(
-                    KEY_SKIPPED.into(),
-                    Value::String(update.version.clone()),
-                );
+                preferences.insert(KEY_SKIPPED.into(), Value::String(update.version.clone()));
                 // Mutually exclusive with remind-later, as in Electron
                 preferences.remove(KEY_REMIND);
                 prefs::write_prefs(&app, &preferences);
@@ -178,7 +175,13 @@ fn on_update_downloaded(
 // so they come back after the restart. Used by the Update Ready dialog and
 // by "Restart Now" in the About dialog.
 pub fn restart_and_install(app: &tauri::AppHandle) {
-    let Some(pending) = app.state::<AppState>().pending_update.lock().unwrap().take() else {
+    let Some(pending) = app
+        .state::<AppState>()
+        .pending_update
+        .lock()
+        .unwrap()
+        .take()
+    else {
         return;
     };
     save_restore_state(app);

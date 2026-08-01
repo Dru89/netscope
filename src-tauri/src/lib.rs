@@ -183,8 +183,8 @@ pub fn run() {
             }
             // Bring the app to the front, like Electron's second-instance
             // handler did.
-            let front = windows::focused_window(app)
-                .or_else(|| app.webview_windows().into_values().next());
+            let front =
+                windows::focused_window(app).or_else(|| app.webview_windows().into_values().next());
             if let Some(window) = front {
                 let _ = window.unminimize();
                 let _ = window.set_focus();
@@ -271,7 +271,9 @@ pub fn run() {
                 }
                 // A macOS document app stays running when its last window
                 // closes; Windows/Linux take Tauri's default exit.
-                tauri::RunEvent::ExitRequested { code: None, api, .. } => {
+                tauri::RunEvent::ExitRequested {
+                    code: None, api, ..
+                } => {
                     api.prevent_exit();
                 }
                 _ => {}
