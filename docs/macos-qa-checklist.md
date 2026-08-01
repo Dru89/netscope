@@ -67,6 +67,10 @@ signing, notarization, and file associations only exist on the bundled app.
 - [ ] The picker still filters to `.har` with an All Files fallback
 - [ ] Right-click on a request row: native context menu; Copy as cURL puts
       a runnable command on the clipboard; Sort By shows the checked field
+- [ ] Sort by Size descending, then Copy All Listed as cURL: the commands
+      arrive in the displayed order, largest first, not HAR file order.
+      Nothing automated covers this — the menu is native, so WebDriver
+      can't reach it, and there are no component tests
 - [ ] Window menu: Minimize/Zoom/Bring All to Front behave natively
 - [ ] Edit menu: copy/paste works in the filter input
 

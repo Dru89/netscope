@@ -384,13 +384,15 @@ function App() {
   const handleContextMenu = useCallback(
     (entry: HarEntry) => {
       platform.showRequestContextMenu({
+        // The "Copy All Listed" actions must copy what the table shows, in the
+        // order it shows it. That's sortedEntries, not filteredEntries.
         entry,
-        allEntries: filteredEntries,
+        allEntries: sortedEntries,
         sortField: sort.field,
         sortDirection: sort.direction,
       });
     },
-    [filteredEntries, sort],
+    [sortedEntries, sort],
   );
 
   // Precompute unique values from entries for filter autocomplete
