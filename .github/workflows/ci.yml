@@ -17,9 +17,19 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+
+      # A lockfile that isn't what npm would produce means something wrote it
+      # with a different npm. That shape installs fine for whoever wrote it and
+      # then fails every job on the next PR, naming packages unrelated to the
+      # change. Catch it on the PR that causes it.
+      - name: Lockfile matches what npm resolves
+        run: |
+          npm install --package-lock-only
+          git diff --exit-code package-lock.json
+
       - run: npm run format:check
       - run: npx tsc --noEmit
       - run: npm test
@@ -40,7 +50,7 @@ jobs:
       # Vite output must exist for tauri's context generation
       - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run build:vite
@@ -65,7 +75,7 @@ jobs:
           workspaces: src-tauri
       - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       # Vite output must exist for tauri's context generation
@@ -84,7 +94,7 @@ jobs:
           lfs: true
       - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - name: Install Tauri system dependencies
         run: |

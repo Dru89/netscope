@@ -4,6 +4,10 @@
   "description": "A desktop app for viewing and exploring HAR files",
   "author": "Drew Hays <drew@hays.fm>",
   "license": "MIT",
+  "engines": {
+    "node": ">=24.18.0",
+    "npm": ">=11.16.0"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Dru89/netscope"
