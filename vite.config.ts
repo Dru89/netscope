@@ -10,5 +10,8 @@ export default defineConfig({
   },
   test: {
     exclude: ["test/e2e/**", "node_modules/**", "site/**"],
+    // Utility tests run in node; component tests opt into jsdom with a
+    // `// @vitest-environment jsdom` docblock at the top of the file.
+    setupFiles: ["./src/testing/setup.ts"],
   },
 });
