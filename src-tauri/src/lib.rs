@@ -9,6 +9,7 @@ mod windows;
 
 use har::{load_har_file, HarFileData};
 use state::AppState;
+use std::path::{Path, PathBuf};
 use tauri::Manager;
 
 // Read a HAR file for the frontend. This deliberately bypasses the fs-plugin
@@ -122,9 +123,31 @@ fn save_file(path: String, contents: String, base64: bool) -> Result<(), String>
     std::fs::write(&path, bytes).map_err(|e| e.to_string())
 }
 
-fn find_har_arg(args: impl Iterator<Item = String>) -> Option<String> {
-    args.skip(1)
-        .find(|arg| arg.ends_with(".har") && std::path::Path::new(arg).exists())
+/// Windows and Linux match file associations case-insensitively, so a
+/// double-clicked `TRACE.HAR` arrives in argv exactly like `trace.har`.
+/// Comparing the extension rather than the whole string also avoids matching
+/// a file literally named `.har`.
+fn has_har_extension(path: &Path) -> bool {
+    path.extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("har"))
+}
+
+/// The first argument that names an existing `.har` file, resolved to an
+/// absolute path.
+///
+/// `cwd` is the working directory the arguments came from, which is not
+/// always this process's own: the single-instance plugin hands over a second
+/// launch's argv and cwd, and a relative path in it means nothing here. The
+/// caller must pass the matching directory or a relative argument resolves
+/// against the wrong place — silently opening nothing, or the wrong file if
+/// one happens to share the name.
+fn find_har_arg(args: impl Iterator<Item = String>, cwd: &Path) -> Option<String> {
+    args.skip(1).find_map(|arg| {
+        // Joining an absolute path replaces the base, so this handles both.
+        let candidate = cwd.join(&arg);
+        (has_har_extension(&candidate) && candidate.exists())
+            .then(|| candidate.to_string_lossy().into_owned())
+    })
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -142,14 +165,17 @@ pub fn run() {
 
     // Files opened via file association arrive as argv on Linux/Windows.
     // On macOS they arrive through RunEvent::Opened instead.
-    let startup_file = find_har_arg(std::env::args());
+    let startup_file = find_har_arg(
+        std::env::args(),
+        &std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
+    );
 
     tauri::Builder::default()
         // Must be the first plugin: a second launch (e.g. double-clicking
         // another .har on Windows/Linux) hands its argv to this process and
         // exits, so dedup / welcome-reuse / cascade work across launches.
-        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
-            match find_har_arg(argv.into_iter()) {
+        .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
+            match find_har_arg(argv.into_iter(), Path::new(&cwd)) {
                 Some(path) => windows::open_file_from_path(app, &path),
                 None => {
                     let _ = windows::create_window(app, None);
@@ -251,4 +277,145 @@ pub fn run() {
                 _ => {}
             }
         });
+}
+
+#[cfg(test)]
+mod argv_tests {
+    use super::{find_har_arg, has_har_extension};
+    use std::path::{Path, PathBuf};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    static COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    /// A scratch directory that cleans itself up. Enough for these tests, and
+    /// avoids a dev-dependency for four files.
+    struct Scratch(PathBuf);
+
+    impl Scratch {
+        fn new() -> Self {
+            let dir = std::env::temp_dir().join(format!(
+                "netscope-argv-{}-{}",
+                std::process::id(),
+                COUNTER.fetch_add(1, Ordering::Relaxed)
+            ));
+            std::fs::create_dir_all(&dir).expect("create scratch dir");
+            Scratch(dir)
+        }
+
+        fn touch(&self, name: &str) -> PathBuf {
+            let path = self.0.join(name);
+            std::fs::write(&path, "{}").expect("write scratch file");
+            path
+        }
+
+        fn path(&self) -> &Path {
+            &self.0
+        }
+    }
+
+    impl Drop for Scratch {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    /// argv always starts with the executable, which find_har_arg skips.
+    fn argv(rest: &[&str]) -> std::vec::IntoIter<String> {
+        let mut all = vec!["/usr/bin/netscope".to_string()];
+        all.extend(rest.iter().map(|s| s.to_string()));
+        all.into_iter()
+    }
+
+    #[test]
+    fn extension_match_ignores_case() {
+        assert!(has_har_extension(Path::new("trace.har")));
+        assert!(has_har_extension(Path::new("TRACE.HAR")));
+        assert!(has_har_extension(Path::new("Trace.Har")));
+        assert!(!has_har_extension(Path::new("trace.json")));
+        // A file called ".har" has no extension, only a name.
+        assert!(!has_har_extension(Path::new(".har")));
+    }
+
+    #[test]
+    fn finds_an_uppercase_har_from_a_file_association() {
+        let dir = Scratch::new();
+        let file = dir.touch("TRACE.HAR");
+
+        let found = find_har_arg(argv(&[file.to_str().unwrap()]), dir.path());
+
+        assert_eq!(found, Some(file.to_string_lossy().into_owned()));
+    }
+
+    #[test]
+    fn resolves_a_relative_arg_against_the_supplied_cwd() {
+        let dir = Scratch::new();
+        dir.touch("trace.har");
+
+        // The process cwd is somewhere else entirely; only the passed-in
+        // directory should decide what "trace.har" means.
+        let found = find_har_arg(argv(&["trace.har"]), dir.path());
+
+        assert_eq!(
+            found,
+            Some(dir.path().join("trace.har").to_string_lossy().into_owned())
+        );
+    }
+
+    #[test]
+    fn a_relative_arg_is_not_found_under_an_unrelated_cwd() {
+        let dir = Scratch::new();
+        let elsewhere = Scratch::new();
+        dir.touch("trace.har");
+
+        assert_eq!(find_har_arg(argv(&["trace.har"]), elsewhere.path()), None);
+    }
+
+    #[test]
+    fn an_absolute_arg_ignores_the_cwd() {
+        let dir = Scratch::new();
+        let elsewhere = Scratch::new();
+        let file = dir.touch("trace.har");
+
+        let found = find_har_arg(argv(&[file.to_str().unwrap()]), elsewhere.path());
+
+        assert_eq!(found, Some(file.to_string_lossy().into_owned()));
+    }
+
+    #[test]
+    fn ignores_paths_that_do_not_exist() {
+        let dir = Scratch::new();
+        assert_eq!(find_har_arg(argv(&["missing.har"]), dir.path()), None);
+    }
+
+    #[test]
+    fn ignores_files_that_are_not_har() {
+        let dir = Scratch::new();
+        dir.touch("notes.json");
+        assert_eq!(find_har_arg(argv(&["notes.json"]), dir.path()), None);
+    }
+
+    #[test]
+    fn skips_the_executable_even_when_it_looks_like_a_capture() {
+        let dir = Scratch::new();
+        let exe = dir.touch("netscope.har");
+        let real = dir.touch("trace.har");
+
+        let mut all = vec![exe.to_string_lossy().into_owned()];
+        all.push(real.to_string_lossy().into_owned());
+
+        let found = find_har_arg(all.into_iter(), dir.path());
+
+        assert_eq!(found, Some(real.to_string_lossy().into_owned()));
+    }
+
+    #[test]
+    fn takes_the_first_capture_when_several_are_passed() {
+        let dir = Scratch::new();
+        let first = dir.touch("a.har");
+        dir.touch("b.har");
+
+        let found = find_har_arg(argv(&[first.to_str().unwrap(), "b.har"]), dir.path());
+
+        assert_eq!(found, Some(first.to_string_lossy().into_owned()));
+    }
 }
