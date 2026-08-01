@@ -99,10 +99,35 @@ src/utils/filterSuggestions.test.ts  # Autocomplete suggestions
 src/utils/copyFormatters.test.ts     # Copy-as-cURL/fetch/PowerShell
 src/utils/har.test.ts                # Transfer-size handling (Chrome _transferSize)
 src/utils/highlightJson.test.ts      # Response-tab JSON syntax tint
+src/App.test.tsx                     # Component tests (jsdom)
 src-tauri/src/update.rs              # #[cfg(test)] date math for remind-later
 ```
 
 Run `npm test` (and `cargo test --manifest-path src-tauri/Cargo.toml`) before committing. New utility functions need tests.
+
+### Component tests
+
+Utility tests run in node. Component tests opt into jsdom with a docblock on the first line of the file:
+
+```tsx
+// @vitest-environment jsdom
+```
+
+They mock the native boundary wholesale, which works only because `platform.ts` is the sole module allowed to import `@tauri-apps/*`:
+
+```tsx
+vi.mock("./platform", async () => {
+  const { platformMock } = await import("./testing/platformMock");
+  return platformMock();
+});
+```
+
+- `src/testing/platformMock.ts` — a `vi.fn()` per `platform.ts` export. **Add to it when you add a platform function**, or the component fails with "not a function". Listener registrars must return a cleanup function.
+- `src/testing/har.ts` — `makeHar()` builds synthetic captures. Keep them under 12 entries: jsdom measures the viewport as zero, so the virtual window falls back to `MIN_OVERSCAN` and renders only the first 12 rows.
+- `src/testing/setup.ts` — stubs `ResizeObserver` and `matchMedia`, which jsdom lacks. Runs for every test file and stays inert in node.
+- Register `afterEach(cleanup)` yourself; vitest globals are off, so testing-library's auto-cleanup doesn't fire.
+
+This layer catches renderer wiring bugs that fall between the unit tests and E2E — native menus can't be driven over WebDriver, and tauri-driver doesn't run on macOS at all. See #13.
 
 ### E2E Tests
 
