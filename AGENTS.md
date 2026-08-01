@@ -100,8 +100,30 @@ src/utils/copyFormatters.test.ts     # Copy-as-cURL/fetch/PowerShell
 src/utils/har.test.ts                # Transfer-size handling (Chrome _transferSize)
 src/utils/highlightJson.test.ts      # Response-tab JSON syntax tint
 src/App.test.tsx                     # Component tests (jsdom)
+src/components/DetailPanel.test.tsx  # Component tests (jsdom)
+src/components/SourceTab.test.tsx    # Component tests (jsdom)
+src-tauri/src/lib.rs                 # argv parsing + mock-runtime command tests
+src-tauri/src/state.rs               # #[cfg(test)] pending-picker claim
 src-tauri/src/update.rs              # #[cfg(test)] date math for remind-later
 ```
+
+### Rust mock-runtime tests
+
+`tauri::test` (a dev-only feature in `Cargo.toml`) builds an app on `MockRuntime` with no webview and no display, so window-scoped commands can be driven **on macOS**, where tauri-driver can't run at all:
+
+```rust
+let app = mock_builder()
+    .manage(AppState::new())
+    .build(mock_context(noop_assets()))
+    .unwrap();
+let win = WebviewWindowBuilder::new(&app, "window-1", WebviewUrl::App("index.html".into()))
+    .build()
+    .unwrap();
+```
+
+- A command must be generic over the runtime to be callable this way — `fn get_window_file<R: tauri::Runtime>(window: WebviewWindow<R>)`. Everything in `windows.rs` is still hard-typed to `Wry` and can't be reached yet.
+- `noop_assets()` keeps the tests independent of whether the renderer has been built. Don't reach for `generate_context!()` — besides needing `dist/`, it carries the real identifier, which points the next item at the developer's actual preferences file.
+- **`note_file_open` is not safely testable as written.** It fans out into `recent::add`, which persists `preferences.json`, mirrors to the OS recent-documents list (objc2 on the main thread), and rebuilds the menu. Those seams need injecting first. See #13.
 
 Run `npm test` (and `cargo test --manifest-path src-tauri/Cargo.toml`) before committing. New utility functions need tests.
 
