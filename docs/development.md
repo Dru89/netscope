@@ -58,14 +58,10 @@ export the variables yourself:
 set -a; . ./.env; set +a
 ```
 
-**The variable names are not the GitHub secret names.** Three of them
-differ, and setting the secret name locally silently does nothing:
-
-| Local variable               | GitHub secret                 |
-| ---------------------------- | ----------------------------- |
-| `APPLE_PASSWORD`             | `APPLE_APP_SPECIFIC_PASSWORD` |
-| `APPLE_CERTIFICATE`          | `MAC_CERTIFICATE_BASE64`      |
-| `APPLE_CERTIFICATE_PASSWORD` | `MAC_CERTIFICATE_PASSWORD`    |
+The names here match the GitHub secret names, so what works locally works
+in CI. (Three of them didn't until #34: `APPLE_PASSWORD` was stored as
+`APPLE_APP_SPECIFIC_PASSWORD`, and the `APPLE_CERTIFICATE*` pair as
+`MAC_CERTIFICATE_*`. Setting those older names locally does nothing.)
 
 For a signed local build on a Mac, the Developer ID certificate comes from
 your login keychain, so you don't need `APPLE_CERTIFICATE` at all — only
@@ -124,15 +120,25 @@ rolling `nightly` release carries the updater manifest for that channel.
 
 ### Required GitHub Actions secrets
 
+Each secret is named after the variable it feeds, so the workflow `env:`
+blocks are passthroughs:
+
 | Secret                               | Purpose                                      |
 | ------------------------------------ | -------------------------------------------- |
 | `TAURI_SIGNING_PRIVATE_KEY`          | Updater artifact signing (minisign)          |
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for that key (empty string)         |
-| `MAC_CERTIFICATE_BASE64`             | Base64-encoded .p12 Developer ID certificate |
-| `MAC_CERTIFICATE_PASSWORD`           | Password for the .p12 file                   |
+| `APPLE_CERTIFICATE`                  | Base64-encoded .p12 Developer ID certificate |
+| `APPLE_CERTIFICATE_PASSWORD`         | Password for the .p12 file                   |
 | `APPLE_ID`                           | Apple ID email for notarization              |
-| `APPLE_APP_SPECIFIC_PASSWORD`        | App-specific password for notarization       |
+| `APPLE_PASSWORD`                     | App-specific password for notarization       |
 | `APPLE_TEAM_ID`                      | Apple Developer Team ID                      |
+
+The three Apple ones were once `MAC_CERTIFICATE_BASE64`,
+`MAC_CERTIFICATE_PASSWORD` and `APPLE_APP_SPECIFIC_PASSWORD`, inherited
+from the Electron build, where electron-builder read `CSC_LINK` and
+`CSC_KEY_PASSWORD` and the names matched nothing either. The workflows
+still fall back to the old names, so either set works until those secrets
+are deleted. See #34.
 
 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` must be _set_ even when the key has no
 password — set it to an empty string. Leaving it unset is not equivalent:
