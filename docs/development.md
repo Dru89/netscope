@@ -140,6 +140,12 @@ merged across platforms onto the release.
 To release: `make release` (bumps `package.json` — the single version
 source, `tauri.conf.json` reads it — commits, tags, pushes).
 
+GitHub generates the release notes from merged PRs. For 4.0.0 that isn't
+enough on its own — the bundle identifier changes from `com.netscope.app` to
+`dev.unremarkable.netscope`, which the OS treats as a new application. Link
+`docs/upgrading-from-3.md` from the 4.0.0 release body; it covers the
+Windows duplicate entry and the preferences that don't carry over.
+
 Nightlies (`.github/workflows/nightly.yml`) run daily, on pushes to
 `nightly`, and on manual dispatch, producing dated pre-releases; the
 rolling `nightly` release carries the updater manifest for that channel.
