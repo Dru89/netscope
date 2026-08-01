@@ -54,6 +54,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build:vite
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
       - run: cargo test --manifest-path src-tauri/Cargo.toml
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 

@@ -93,7 +93,11 @@ pub fn show(
         let text = if active {
             format!(
                 "{label} ({})",
-                if sort_direction == "asc" { "↑" } else { "↓" }
+                if sort_direction == "asc" {
+                    "↑"
+                } else {
+                    "↓"
+                }
             )
         } else {
             label.to_string()
@@ -122,11 +126,7 @@ pub fn show(
     window.popup_menu(&menu)
 }
 
-fn item(
-    app: &tauri::AppHandle,
-    id: &str,
-    text: &str,
-) -> tauri::Result<MenuItem<tauri::Wry>> {
+fn item(app: &tauri::AppHandle, id: &str, text: &str) -> tauri::Result<MenuItem<tauri::Wry>> {
     MenuItem::with_id(app, id, text, true, None::<&str>)
 }
 
