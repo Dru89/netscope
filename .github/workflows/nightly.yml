@@ -110,13 +110,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Prefer the secret named after the variable; fall back to the
-          # Electron-era name until those are deleted. See #34.
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE || secrets.MAC_CERTIFICATE_BASE64 }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD || secrets.MAC_CERTIFICATE_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: "Developer ID Application"
           APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD || secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           tagName: ${{ needs.compute-version.outputs.tag_name }}
@@ -131,6 +129,23 @@ jobs:
           args: >-
             ${{ matrix.args }}
             --config {"plugins":{"updater":{"endpoints":["https://github.com/Dru89/netscope/releases/download/nightly/latest.json"]}}}
+
+      # Nothing else here would notice an unsigned build: tauri-action skips
+      # signing when the certificate is absent and still succeeds, so a broken
+      # secret would publish a nightly that Gatekeeper blocks. Mirrors the
+      # check in release.yml.
+      - name: Verify macOS code signature
+        if: matrix.platform == 'mac'
+        run: |
+          APP=$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -name "*.app" -maxdepth 1 | head -1)
+          if [ -z "$APP" ]; then
+            echo "::error::No .app bundle found"
+            exit 1
+          fi
+          echo "Checking signature on $APP"
+          codesign --verify --deep --strict "$APP" 2>&1
+          echo "Signature verified OK"
+          codesign -dvvv "$APP" 2>&1 | grep "Authority"
 
       - name: Build and upload pacman package
         if: matrix.platform == 'linux'
