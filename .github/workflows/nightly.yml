@@ -82,10 +82,14 @@ jobs:
         if: matrix.platform == 'mac'
         env:
           BUILD_CHANNEL: nightly
-          CSC_LINK: ${{ secrets.MAC_CERTIFICATE_BASE64 }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          # The variable names are electron-builder's and notarize.js's, and
+          # can't change. Only the secret they read from moves: prefer the
+          # name that matches what 4.x reads, fall back to the old one until
+          # those are deleted. See #34.
+          CSC_LINK: ${{ secrets.APPLE_CERTIFICATE || secrets.MAC_CERTIFICATE_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD || secrets.MAC_CERTIFICATE_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_PASSWORD || secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npx tsc && npx vite build && npx electron-builder --mac --publish never --config electron-builder.nightly.js
 
