@@ -9,8 +9,11 @@ build:
 	npm run build:vite
 
 # Full production build: bundle + Tauri packaging for the current platform.
+# Loads .env if present — the Tauri CLI has no dotenv support of its own, so
+# this is the only thing that reads it. `set -a` exports everything the file
+# defines; a plain `npx tauri build` still sees nothing. See .env.example.
 package:
-	npm run build
+	set -a; if [ -f .env ]; then . ./.env; fi; set +a; npm run build
 
 # Run all tests (single run): renderer unit tests + Rust shell tests.
 test:
