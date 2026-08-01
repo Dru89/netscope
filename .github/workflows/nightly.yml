@@ -1,11 +1,17 @@
 name: Nightly
 
+# The daily cron is deliberately absent. GitHub only runs `schedule` from the
+# default branch, so it always executed *this* file — building 3.x nightlies
+# nobody wants, while the Tauri branch's identical cron never fired at all.
+# Restore `schedule: - cron: "0 2 * * *"` once 4.0 makes the Tauri tree the
+# default branch, at which point it starts building the right thing. See #41.
+#
+# `push: [nightly]` is likewise inert here: a push runs the workflow file from
+# the branch that was pushed, so the nightly branch's own copy handles it.
 on:
-  schedule:
-    - cron: "0 2 * * *" # 2am UTC daily
-  workflow_dispatch: # manual trigger for testing
+  workflow_dispatch: # manual trigger, the only way to build a 3.x nightly now
   push:
-    branches: [nightly] # trigger on pushes during active development
+    branches: [nightly]
 
 # Cancel superseded nightly builds — a newer push makes the in-flight one stale.
 concurrency:
@@ -68,9 +74,15 @@ jobs:
       - run: npm ci
 
       # pacman target requires bsdtar to build the .MTREE manifest
+      # apt-get update first: the runner image's package index goes stale
+      # against the mirrors within days, and installing the indexed version
+      # then 404s. Same fix as release.yml got in #4; this file was missed,
+      # which is what failed the nightly cron most nights.
       - name: Install Linux build dependencies
         if: matrix.platform == 'linux'
-        run: sudo apt-get install -y libarchive-tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools
 
       # Stamp the version into package.json without committing — the built
       # artifacts will report the nightly version string.
