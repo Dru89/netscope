@@ -229,6 +229,65 @@
   text-align: center;
 }
 
+/* ============ Error banner ============ */
+
+/* The loaded-state counterpart of .welcome-error above. Same colours and
+   chip, because it reports the same failure — only the layout differs: a
+   full-width strip under the toolbar rather than a centred card. */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 8px var(--ns-gutter);
+  background: var(--ns-error-tint);
+  border-top: 1px solid
+    color-mix(in srgb, var(--ns-status-4xx) 25%, transparent);
+  color: var(--ns-status-4xx);
+  font-size: 11.5px;
+}
+
+.error-banner-chip {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ns-status-4xx);
+  color: var(--ns-surface);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.error-banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.error-banner-dismiss {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--ns-r-control);
+  color: var(--ns-status-4xx);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.error-banner-dismiss:hover {
+  background: color-mix(in srgb, var(--ns-status-4xx) 12%, transparent);
+}
+
+.error-banner-dismiss:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ns-focus-ring);
+}
+
 /* ============ Toolbar ============ */
 
 .toolbar {

@@ -422,6 +422,25 @@ function App() {
             filteredEntries={sortedEntries.length}
             suggestionData={suggestionData}
           />
+          {/* A parse failure with a capture already open used to set `error`
+              and render nothing, because only WelcomeScreen showed it and
+              that unmounts once a file loads — so a bad drop looked like the
+              app had hung. Same presentation as the welcome screen's error,
+              since it's the same failure. */}
+          {error && (
+            <div className="error-banner" role="alert">
+              <span className="error-banner-chip">!</span>
+              <span className="error-banner-text">{error}</span>
+              <button
+                type="button"
+                className="error-banner-dismiss"
+                onClick={() => setError(null)}
+                aria-label="Dismiss error"
+              >
+                ×
+              </button>
+            </div>
+          )}
           <div className="app-main">
             <div
               className={`request-list-pane ${detailPanelOpen ? "with-detail" : ""}`}

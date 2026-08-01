@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  act,
+} from "@testing-library/react";
 import { makeHar } from "./testing/har";
 
 vi.mock("./platform", async () => {
@@ -112,5 +118,63 @@ describe("request context menu entry list", () => {
       "small.js",
       "tiny.js",
     ]);
+  });
+});
+
+describe("parse error banner", () => {
+  beforeEach(() => {
+    vi.mocked(platform.onHarFileOpened).mockClear();
+  });
+  afterEach(cleanup);
+
+  /** The handler App registered for OS-driven opens, so a file can be pushed
+   *  at an already-loaded window the way a drop or File > Open would. */
+  function pushFile(content: string, fileName: string) {
+    const handler = vi.mocked(platform.onHarFileOpened).mock.calls[0][0];
+    act(() => handler({ filePath: `/tmp/${fileName}`, content, fileName }));
+  }
+
+  it("surfaces a parse failure that used to be silent", async () => {
+    await loadFile();
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    pushFile("{ not a har }", "broken.har");
+
+    expect(screen.getByRole("alert").textContent).toMatch(
+      /Failed to parse HAR file/,
+    );
+  });
+
+  it("leaves the open capture alone", async () => {
+    await loadFile();
+
+    pushFile("{ not a har }", "broken.har");
+
+    // The previous file is still usable — the failure replaced nothing.
+    expect(screen.getByText("huge.js")).toBeTruthy();
+    expect(displayedOrder()).toEqual(FILE_ORDER);
+  });
+
+  it("dismisses on click", async () => {
+    await loadFile();
+    pushFile("{ not a har }", "broken.har");
+
+    fireEvent.click(screen.getByLabelText("Dismiss error"));
+
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("clears when a later file loads successfully", async () => {
+    await loadFile();
+    pushFile("{ not a har }", "broken.har");
+    expect(screen.queryByRole("alert")).not.toBeNull();
+
+    pushFile(
+      makeHar([{ url: "https://cdn.example.com/ok.js", size: 1 }]),
+      "ok.har",
+    );
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByText("ok.js")).toBeTruthy();
   });
 });
